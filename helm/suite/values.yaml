@@ -1,116 +1,42 @@
 hookImageServer:
   enabled: true
-  nodeSelector:
-    "kubernetes.io/hostname": "mekotronics-r58x-4g-lan1.fritz.box" #  192.168.66.174 
+  hostDirectory: "/opt/hook"
 
 nodePort:
   hookImageServer:
     enabled: true
     port: 32083
-  hegel:
-    enabled: true
-    port: 32061
-  tinkGRPC: # no ingress for this
-    enabled: true
-    port: 32013
-
-smee:
-  additionalArgs: [ "--dhcp-mode=proxy" ] # DHCP proxy mode!
-  hostNetwork: true # no proxies, loadbalancers, or anything: it just runs as if directly on the k8s host.
-  #additionalEnv: [ { name: "SMEE_PUBLIC_IP_INTERFACE", value: "lan" } ] # auto-detect IP's on this interface
-  logLevel: "debug"
-  trustedProxies: [ "0.0.0.0/0" ] # Trust _all_ proxies, insecure
-  imagePullPolicy: Always # I re-push it there sometimes
-  nodeSelector:
-    "kubernetes.io/hostname": "mekotronics-r58x-4g-lan1.fritz.box" #  192.168.66.174 
-  deployment:
-    strategy:
-      type: Recreate # stop old pod before creating a new one
-  rbac:
-    type: ClusterRole # for multi-namespace
-    name: smee-cluster-role
-    bindingName: smee-cluster-rolebinding
-
-hegel:
-  trustedProxies: [ "0.0.0.0/0" ] # Trust _all_ proxies, insecure
-  rbac:
-    type: ClusterRole # for multi-namespace
-    name: hegel-cluster-role
-    bindingName: hegel-cluster-rolebinding
-
-tink:
-  controller:
-    imagePullPolicy: Always
-    rbac:
-      type: ClusterRole # for multi-namespace
-      name: tink-controller-cluster-role
-      bindingName: tink-controller-cluster-rolebinding
-  server:
-    imagePullPolicy: Always
-    rbac:
-      type: ClusterRole # for multi-namespace
-      name: tink-server-cluster-role
-      bindingName: tink-server-cluster-rolebinding
-
 
 #### SHOWCASE. Needs to know coordinates to where Hegel / Smee (syslog, etc) and HookOS vmlinux and OS images are.
 showcase:
   enabled: true
-
   workflows:
-    enabled: false # false to completely skip generating Tinkerbell Workflow CRs; Hardware and Templates are still generated
-
+    enabled: true # false to completely skip generating Tinkerbell Workflow CRs; Hardware and Templates are still generated
   jobs:
     enabled: true  # false to completely skip generating jobs
-    nodeSelector:
-      "kubernetes.io/hostname": "mekotronics-r58x-4g-lan1.fritz.box"
-  
-  tinkerbell:
-    hostDirectory: "/opt/hook-r58x-4g" # This will be needed in smee one day as well, to serve DTB files over TFTP for u-boot
-    # These two should point to hookImageServer
-    hookURL: "http://192.168.66.174:32083"
-    imagesURL: "http://192.168.66.174:32083"
-    # points to smee at :514
-    syslogHost: "192.168.66.174"
-    # tink's grpc nodeport
-    grpcAuthority: "192.168.66.174:32013"
-    # Hegel nodeport
-    hegelURL: "http://192.168.66.174:32061"
-  
-  
-  hardware:
-    common:
-      uefi: true
-      ipv4:
-        # @TODO: Use _your_ values here! Also in the ipv4.address of the devices!
-        gateway: "192.168.66.1" # Must be set, otherwise no internet access; can be overriden per-device
-        netmask: "255.255.255.0"
-        dns: [ "192.168.66.1" ]
-        time_servers: [ "192.168.66.1" ]
+    hooks:
+      enabled: false # cos we are doing L3 provisioning, hooks are already in the bootable media
 
-    devices:
-      "odroidm1":
-        enabled: true
-        arch: aarch64
-        mac: "fe:9b:e6:5c:7d:15"
-        rootDisk: "/dev/disk/by-id/nvme-WDC_WDS100T2B0C-00PXH0_21411V443507"
-        ipv4:
-          address: "192.168.66.124"
-        hookRef: "armbian-rockchip64-edge"
-        imageRef: "armbian-rpardini-odroidm1-edge-k8s"
-        extraKernelCommandLine: "console=ttyS2,1500000"
-        userData: |
-          #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/odroidm1_tinkerbell_from_hegel
 
-      "vm06":
-        enabled: true
-        arch: "x86_64"
-        mac: "52:54:00:01:03:06"
-        rootDisk: "/dev/disk/by-id/virtio-root_disk_serial"
-        ipv4:
-          address: "192.168.66.76"
-        hookRef: "default-hook-amd64"
-        imageRef: "armbian-uefi-x86-ddk-cloud-k8s"
-        extraKernelCommandLine: "console=ttyS0"
-        userData: |
-          #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base_from_hegel
+#### Tinkerbell (-ng) subChart.
+tinkerbell:
+  enabled: true
+  hookos:
+    enabled: false # suite does its own nginx
+  kubevip:
+    enabled: false # suite does not use Smee at all, much less kubevip
+  deployment:
+    daemonSet:
+      enabled: true # if true, it becomes actually a DaemonSet, not Deployment
+    hostNetwork: true # deploy on the host network
+    envs:
+      globals:
+        enableRufioController: false # do not deploy Rufio  (BMC controller)
+        enableSecondstar: false # do not deploy Secondstar (Serial over SSH)
+        enableSmee: false # Do not, I repeat, do NOT deploy Smee (DHCP/TFTP/Syslog/HTTP-for-IPXE)
+    init: # Not deploying Smee, so init not required
+      enabled: false
+  service:
+    type: ClusterIP # we're already in hostNetwork mode
+    #lbClass: "io.cilium/node" # Use Cilium's Node LB
+
