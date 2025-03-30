@@ -5,21 +5,11 @@ type: application
 version: 0.0.1
 
 dependencies:
-  - name: tink
-    version: "0.3.0"
-    repository: "file://../tink"
-  - name: smee
-    version: "0.6.3"
-    repository: "file://../smee"
-  - name: rufio
-    version: "0.4.0"
-    repository: "file://../rufio"
-  - name: hegel
-    version: "0.4.1"
-    repository: "file://../hegel"
-
-  # showcase chart!
+  - name: tinkerbell
+    version: "^0" # See https://helm.sh/docs/chart_template_guide/function_list/#hyphen-range-comparisons et al
+    repository: "file://../tinkerbell"
+    condition: tinkerbell.enabled
   - name: showcase
-    version: "0.0.3"
+    version: "^0" # See https://helm.sh/docs/chart_template_guide/function_list/#hyphen-range-comparisons et al
     repository: "file://../showcase"
     condition: showcase.enabled
