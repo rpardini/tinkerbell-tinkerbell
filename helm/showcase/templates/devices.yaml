@@ -86,40 +86,6 @@ spec:
         slug: "ubuntuslug"
         os_slug: "ubuntu_24_04"
         version: "24.04"
-  interfaces:
-    - dhcp:
-        arch: "{{ $dev.arch }}"
-        hostname: "{{ $deviceId }}"
-        ip:
-          address: "{{ $dev.ipv4.address }}"
-          netmask: "{{ $dev.ipv4.netmask }}"
-          gateway: "{{ $dev.ipv4.gateway }}"
-        lease_time: 86400
-        mac: "{{ $dev.mac }}"
-        name_servers:
-          {{- range $mergedDevice.ipv4.dns }}
-          - {{ . | quote }}
-          {{- end }}
-        uefi: {{ $dev.uefi }}
-        time_servers:
-          {{- range $mergedDevice.ipv4.time_servers }}
-          - {{ . | quote }}
-          {{- end }}
-      netboot:
-        allowPXE: true
-        allowWorkflow: true
-        ipxe: # @TODO
-          contents: |
-            echo Showcase starting for {{$deviceId}} with hook {{$mergedDevice.hookRef}} and image {{$mergedDevice.imageRef}}...
-            set download-url {{ $.Values.tinkerbell.hookURL }}
-            set kernel-params tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{$dev.mac}} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} modules=loop,squashfs,sd-mod,usb-storage initrd={{ $hookObj.initrd }} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
-            echo Kernel image: ${download-url}/{{ $hookObj.kernel }}
-            echo Kernel initrd: ${download-url}/{{ $hookObj.initrd }}
-            echo Kernel cmdline: ${kernel-params}
-            kernel ${download-url}/{{ $hookObj.kernel }} ${kernel-params}
-            initrd ${download-url}/{{ $hookObj.initrd }}
-            imgstat
-            boot
 ---
 apiVersion: "tinkerbell.org/v1alpha1"
 kind: Template
