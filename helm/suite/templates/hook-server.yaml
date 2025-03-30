@@ -76,6 +76,10 @@ spec:
                 path: nginx.conf
         - name: hook-artifacts
           hostPath:
+            {{- if .Values.hookImageServer.hostDirectory }}
+            path: {{ .Values.hookImageServer.hostDirectory }}
+            {{- else }}
             path: {{ .Values.showcase.tinkerbell.hostDirectory }}
+            {{- end }}
             type: DirectoryOrCreate
 {{- end }}
