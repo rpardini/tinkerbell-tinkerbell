@@ -17,6 +17,8 @@ tinkerbell:
   kubevip:
     enabled: false # suite does not use Smee at all, much less kubevip
   deployment:
+    daemonSet:
+      enabled: false # if true, it becomes actually a DaemonSet, not Deployment
     strategy:
       type: Recreate # stop old pod before creating a new one - needed for hostNetwork
     hostNetwork: true # deploy on the host network
