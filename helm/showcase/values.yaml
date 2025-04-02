@@ -11,6 +11,10 @@ actions:
 jobs:
   enabled: false # false to completely skip generating jobs
   nodeSelector: null # or an object with keys and values for NodeSelector
+  hooks:
+    enabled: true # enable hook download jobs? (depends on jobs.enabled too)
+  images:
+    enabled: true # enable image download jobs? (depends on jobs.enabled too)
 
 workflows:
   enabled: true # false to completely skip generating Tinkerbell Workflow CRs; Hardware and Templates are still generated
