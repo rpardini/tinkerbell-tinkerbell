@@ -1,13 +1,24 @@
 hookImageServer:
-  enabled: false
+  enabled: true
   hostDirectory: "/opt/hook"
   #nodeSelector:
   #  "kubernetes.io/hostname": "mekotronics-r58x-4g-lan1.fritz.box" #  192.168.66.174
 
 nodePort: # @TODO: better to have an LB?
   hookImageServer:
-    enabled: false
+    enabled: true
     port: 32083
+
+#### SHOWCASE. Needs to know coordinates to where Hegel / Smee (syslog, etc) and HookOS vmlinux and OS images are.
+showcase:
+  enabled: true
+  workflows:
+    enabled: true # false to completely skip generating Tinkerbell Workflow CRs; Hardware and Templates are still generated
+  jobs:
+    enabled: true  # false to completely skip generating jobs
+    hooks:
+      enabled: false # cos we are doing L3 provisioning, hooks are already in the bootable media
+
 
 #### Tinkerbell (-ng) subChart.
 tinkerbell:
@@ -17,6 +28,7 @@ tinkerbell:
   kubevip:
     enabled: false # suite does not use Smee at all, much less kubevip
   deployment:
+    image: ghcr.io/tinkerbell/tinkerbell:decd26b # specific rev
     daemonSet:
       enabled: true # if true, it becomes actually a DaemonSet, not Deployment
     hostNetwork: true # deploy on the host network
@@ -30,51 +42,4 @@ tinkerbell:
   service:
     type: ClusterIP # we're already in hostNetwork mode
     #lbClass: "io.cilium/node" # Use Cilium's Node LB
-
-#### SHOWCASE. Needs to know coordinates to where Hegel / Smee (syslog, etc) and HookOS vmlinux and OS images are.
-showcase:
-  enabled: false
-  workflows:
-    enabled: true # false to completely skip generating Tinkerbell Workflow CRs; Hardware and Templates are still generated
-  jobs:
-    enabled: true  # false to completely skip generating jobs
-
-OLD_STUFF:
-  smee:
-    additionalArgs: ["--dhcp-mode=proxy"] # DHCP proxy mode!
-    hostNetwork: true # no proxies, loadbalancers, or anything: it just runs as if directly on the k8s host.
-    #additionalEnv: [ { name: "SMEE_PUBLIC_IP_INTERFACE", value: "lan" } ] # auto-detect IP's on this interface
-    logLevel: "debug"
-    trustedProxies: ["0.0.0.0/0"] # Trust _all_ proxies, insecure
-    imagePullPolicy: Always # I re-push it there sometimes
-    nodeSelector:
-      "kubernetes.io/hostname": "mekotronics-r58x-4g-lan1.fritz.box" #  192.168.66.174
-    deployment:
-      strategy:
-        type: Recreate # stop old pod before creating a new one
-    rbac:
-      type: ClusterRole # for multi-namespace
-      name: smee-cluster-role
-      bindingName: smee-cluster-rolebinding
-
-  hegel:
-    trustedProxies: ["0.0.0.0/0"] # Trust _all_ proxies, insecure
-    rbac:
-      type: ClusterRole # for multi-namespace
-      name: hegel-cluster-role
-      bindingName: hegel-cluster-rolebinding
-
-  tink:
-    controller:
-      imagePullPolicy: Always
-      rbac:
-        type: ClusterRole # for multi-namespace
-        name: tink-controller-cluster-role
-        bindingName: tink-controller-cluster-rolebinding
-    server:
-      imagePullPolicy: Always
-      rbac:
-        type: ClusterRole # for multi-namespace
-        name: tink-server-cluster-role
-        bindingName: tink-server-cluster-rolebinding
 
