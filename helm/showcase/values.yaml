@@ -1,8 +1,8 @@
 # Basic information on how Tinkerbell is setup.
 tinkerbell:
   hostDirectory: "/opt/hook" # hostPath where Hook & images are downloaded & served from
-  imagesURL: "http://192.168.0.43:8080" # # URL where images are served from
-  hegelURL: "http://192.168.0.43:32061" # Hegel URL
+  imagesURL: "http://192.168.0.43:32083" # # URL where images are served from
+  hegelURL: "http://192.168.0.43:50061" # Hegel URL
 
 actions:
   repository: "quay.io/tinkerbellrpardini/actions" # rpardini's fork with some fixes for arm64
@@ -28,8 +28,8 @@ provision:
   common:
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
-    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20250328-0518/"
-    hookDownloadId: "20250328-0518" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
+    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20250330-1342/"
+    hookDownloadId: "20250330-1342" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
   
   # Define one key per hook built to be downloaded and made available. Those _must_ match the hardware definitions.
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
@@ -53,6 +53,15 @@ provision:
       kernelCommandLine: ""
       bootMode: reboot
 
+    "default-hook-amd64":
+      enabled: false
+      arch: "x86_64"
+      downloadFile: "hook_x86_64.tar.gz"
+      kernel: "vmlinuz-x86_64"
+      initrd: "initramfs-x86_64"
+      kernelCommandLine: ""
+      bootMode: reboot # @TODO: this needs to be set per-device & per-image as well # kexec
+
   # Define deployment images; we've a few examples using Ubuntu and Armbian
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
   # to download/prepare it even if no device is using it.
@@ -60,9 +69,9 @@ provision:
     "quartz64a-k8s":
       enabled: false
       arch: "aarch64"
-      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.25-armsurvivors-870/Armbian-unofficial_25.03.25-armsurvivors-870_Quartz64a_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.xz"
-      image: "Armbian-unofficial_25.03.25-armsurvivors-870_Quartz64a_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img"
-      conversion: "xz-qcow2-to-img-nogz" # @TODO: why nogz?!
+      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.30-armsurvivors-880/Armbian-unofficial_25.03.30-armsurvivors-880_Quartz64a_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.xz"
+      image: "Armbian-unofficial_25.03.30-armsurvivors-880_Quartz64a_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.gz"
+      conversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -72,14 +81,28 @@ provision:
     "rpi4b-k8s":
       enabled: false
       arch: "aarch64"
-      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.25-armsurvivors-870/Armbian-unofficial_25.03.25-armsurvivors-870_Rpi4b_bookworm_current_6.12.20-metadata-cloud-k8s-1.30.img.xz"
-      image: "Armbian-unofficial_25.03.25-armsurvivors-870_Rpi4b_bookworm_current_6.12.20-metadata-cloud-k8s-1.30.img.gz"
+      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.30-armsurvivors-880/Armbian-unofficial_25.03.30-armsurvivors-880_Rpi4b_bookworm_current_6.12.20-metadata-cloud-k8s-1.30.img.xz"
+      image: "Armbian-unofficial_25.03.30-armsurvivors-880_Rpi4b_bookworm_current_6.12.20-metadata-cloud-k8s-1.30.img.gz"
       conversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
       doInjectHegelCloudInit: true
       rootfsPartitionNumber: "2" # rpi image has a fat32 boot partition (config.txt and such), and partition 2 is the real ext4 rootfs
+
+    "amd64-k8s":
+      enabled: false
+      arch: "x86_64"
+      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.30-armsurvivors-880/Armbian-unofficial_25.03.30-armsurvivors-880_Uefi-x86_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.qcow2.xz"
+      image: "Armbian-unofficial_25.03.30-armsurvivors-880_Uefi-x86_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.gz"
+      conversion: "xz-qcow2-to-img-gz"
+      doGrowPart: false # Armbian does it itself when booted
+      doUserAndSshSetup: false # Armbian does it itself when booted
+      doFixResolvConf: false
+      doInjectHegelCloudInit: true
+      rootfsPartitionNumber: "3" #  1 is BIOS GRUB partition thing, 2 is ESP, 3 rootfs
+      espPartitionNumber: "2"
+      doRestoreGRUBNormalcySeparateESP: false #!?
 
 # Generates CRs triplets with Hardware, Workflow, and Template, using by-id references to the hook and images above.
 
@@ -95,17 +118,29 @@ hardware:
       imageRef: "quartz64a-k8s"
       extraKernelCommandLine: "console=ttyS2,1500000"
       userData: |
-        #include https://cloud-init.pardini.net.br/rpardini/oldskool-rpardini/master/base_from_hegel
+        #include https://cloud-init.pardini.net.br/rpardini/oldskool-rpardini/master/quartz64a_tinkerbell_l3
 
     # Raspberry Pi 4B (bcm2711)
-    "rpi4b":
-      enabled: false
+    "rpi":
+      enabled: true
       arch: aarch64
-      mac: "rpi4b"
-      rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
+      mac: "rpi"
+      rootDisk: "/dev/disk/by-id/ata-2105_naa.5000000000000001"
       hookRef: "armbian-bcm2711-current"
       imageRef: "rpi4b-k8s"
       extraKernelCommandLine: "console=tty1 console=ttyAMA0,115200 loglevel=7" # Last console defined "wins", thus use tty1 last if no serial console
       userData: |
-        #include https://cloud-init.pardini.net.br/rpardini/oldskool-rpardini/master/base_from_hegel
+        #include https://cloud-init.pardini.net.br/rpardini/oldskool-rpardini/master/rpi4b_tinkerbell_l3
 
+    "vm-amd64":
+      enabled: true
+      arch: x86_64
+      mac: "vm-amd64"
+      rootDisk: "/dev/nvme0n1"
+      hookRef: "default-hook-amd64"
+      imageRef: "amd64-k8s"
+      extraKernelCommandLine: "console=ttyS0"
+      # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
+      # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
