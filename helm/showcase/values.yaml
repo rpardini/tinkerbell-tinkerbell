@@ -1,8 +1,8 @@
 # Basic information on how Tinkerbell is setup.
 tinkerbell:
   hostDirectory: "/opt/hook" # hostPath where Hook & images are downloaded & served from
-  imagesURL: "http://192.168.0.43:32083" # # URL where images are served from
-  hegelURL: "http://192.168.0.43:50061" # Hegel URL
+  imagesURL: "http://192.168.66.170:32083" # # URL where images are served from
+  hegelURL: "http://192.168.66.170:50061" # Hegel URL
 
 actions:
   repository: "quay.io/tinkerbellrpardini/actions" # rpardini's fork with some fixes for arm64
@@ -118,7 +118,7 @@ hardware:
       imageRef: "quartz64a-k8s"
       extraKernelCommandLine: "console=ttyS2,1500000"
       userData: |
-        #include https://cloud-init.pardini.net.br/rpardini/oldskool-rpardini/master/quartz64a_tinkerbell_l3
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/quartz64a_tinkerbell_l3
 
     # Raspberry Pi 4B (bcm2711)
     "rpi":
@@ -130,7 +130,7 @@ hardware:
       imageRef: "rpi4b-k8s"
       extraKernelCommandLine: "console=tty1 console=ttyAMA0,115200 loglevel=7" # Last console defined "wins", thus use tty1 last if no serial console
       userData: |
-        #include https://cloud-init.pardini.net.br/rpardini/oldskool-rpardini/master/rpi4b_tinkerbell_l3
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/rpi4b_tinkerbell_l3
 
     "vm-amd64":
       enabled: true
