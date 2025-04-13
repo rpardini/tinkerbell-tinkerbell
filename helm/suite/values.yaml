@@ -1,10 +1,8 @@
 hookImageServer:
   enabled: true
   hostDirectory: "/opt/hook"
-  #nodeSelector:
-  #  "kubernetes.io/hostname": "mekotronics-r58x-4g-lan1.fritz.box" #  192.168.66.174
 
-nodePort: # @TODO: better to have an LB?
+nodePort:
   hookImageServer:
     enabled: true
     port: 32083
@@ -28,7 +26,6 @@ tinkerbell:
   kubevip:
     enabled: false # suite does not use Smee at all, much less kubevip
   deployment:
-    image: ghcr.io/tinkerbell/tinkerbell:decd26b # specific rev
     daemonSet:
       enabled: true # if true, it becomes actually a DaemonSet, not Deployment
     hostNetwork: true # deploy on the host network
