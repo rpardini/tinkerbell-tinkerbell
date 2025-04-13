@@ -12,6 +12,8 @@ env:
   CGO_ENABLED: 0
   GO_VERSION: "1.24"
   HELM_REPO_NAME: ghcr.io/${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || ( format('{0}/tinkerbell', github.repository_owner) ) }}/charts
+  VERSION_SANS_V: "0.0.${{ github.run_number }}" # monotonically increasing version per job run; used in Makefiles and script below
+  VERSION: "v0.0.0-${{ github.run_number }}" # monotonically increasing version per job run; used in Makefiles and script below
 
 jobs:
   validation:
@@ -94,7 +96,17 @@ jobs:
           version: v3.17.0
 
       - name: Lint and Template Helm chart
-        run: make helm-lint helm-template
+        run: |
+          declare -a charts=()
+          # find and add every dir under helm/ directory; use mapfile to remove helm/ prefix
+          mapfile -t charts < <(find helm -mindepth 1 -maxdepth 1 -type d | sed 's|^helm/||')
+          # for each chart, run helm package and helm push
+          for chart in "${charts[@]}"; do
+              echo "--> Validating chart '${chart}'"
+              helm dependency update "helm/${chart}" || true
+              helm lint "helm/${chart}" --set "trustedProxies={127.0.0.1/24}" --set "publicIP=1.1.1.1" --set "artifactsFileServer=http://2.2.2.2"
+              helm template test "helm/${chart}" --set "trustedProxies={127.0.0.1/24}" --set "publicIP=1.1.1.1" --set "artifactsFileServer=http://2.2.2.2" 2>&1 >/dev/null
+          done
 
   build-binaries:
     runs-on: ubuntu-latest
@@ -138,7 +150,7 @@ jobs:
 
       - name: Compile binaries for ${{ matrix.name }}
         run: make ${{ matrix.make-target }}
-      
+
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
@@ -194,7 +206,7 @@ jobs:
 
       - name: Prepare build environment
         run: make prepare-buildx
-      
+
       - name: Build and publish container images
         run: make ${{ matrix.make-target }}
         env:
@@ -242,16 +254,36 @@ jobs:
         with:
           version: v3.17.0
 
-      - name: Replace image values in Helm chart's values.yaml
+      - name: Replace Version and images references in Helm charts
         run: |
           #/bin/bash
           # install the very latest version of yq
           wget "https://github.com/mikefarah/yq/releases/download/v4.45.1/yq_linux_amd64" -O /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
+          
+          # find all Chart.yaml files and replace the version with the one from the env variable, using yq
+          find helm -name Chart.yaml -exec yq eval -i ".version = \"${VERSION_SANS_V}\"" {} \;
+          find helm -name Chart.yaml -exec yq eval -i ".appVersion = \"${VERSION_SANS_V}\"" {} \;
+          
           # replace deployment.agentImage and deployment.image in helm/tinkerbell/values.yaml using yq
-          yq eval -i '.deployment.agentImage = "ghcr.io/${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || ( format('{0}/tinkerbell', github.repository_owner) ) }}/tink-agent:latest"' helm/tinkerbell/values.yaml
-          yq eval -i '.deployment.image = "ghcr.io/${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || ( format('{0}/tinkerbell', github.repository_owner) ) }}/tinkerbell:latest"' helm/tinkerbell/values.yaml
+          yq eval -i ".deployment.agentImage = \"ghcr.io/${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || ( format('{0}/tinkerbell', github.repository_owner) ) }}/tink-agent\"" helm/tinkerbell/values.yaml
+          yq eval -i ".deployment.agentImageTag = \"${VERSION}\"" helm/tinkerbell/values.yaml
+          yq eval -i ".deployment.image = \"ghcr.io/${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || ( format('{0}/tinkerbell', github.repository_owner) ) }}/tinkerbell\"" helm/tinkerbell/values.yaml
+          yq eval -i ".deployment.imageTag = \"${VERSION}\"" helm/tinkerbell/values.yaml
+          
           git diff || true
 
-      - name: Package and publish the Helm chart
-        run: make helm-publish
+      - name: Package and publish all the Helm charts
+        run: |
+          set -x
+          declare -a charts=()
+          # find and add every dir under helm/ directory; use mapfile to remove helm/ prefix
+          mapfile -t charts < <(find helm -mindepth 1 -maxdepth 1 -type d | sed 's|^helm/||')
+          # for each chart, run helm package and helm push
+          for chart in "${charts[@]}"; do
+              echo "--> Doing chart '${chart}'"
+              helm dependency update "helm/${chart}" || true
+              helm package -d out/helm/ "helm/${chart}" --version "${VERSION_SANS_V}" --app-version "${VERSION_SANS_V}"
+              ls -la out/helm/ || true
+              helm push "out/helm/${chart}-${VERSION_SANS_V}.tgz" "oci://${HELM_REPO_NAME}"
+          done
