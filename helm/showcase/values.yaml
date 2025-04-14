@@ -28,8 +28,8 @@ provision:
   common:
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
-    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20250330-1342/"
-    hookDownloadId: "20250330-1342" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
+    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20250414-0518/"
+    hookDownloadId: "20250414-0518" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
   
   # Define one key per hook built to be downloaded and made available. Those _must_ match the hardware definitions.
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
@@ -60,7 +60,16 @@ provision:
       kernel: "vmlinuz-x86_64"
       initrd: "initramfs-x86_64"
       kernelCommandLine: ""
-      bootMode: reboot # @TODO: this needs to be set per-device & per-image as well # kexec
+      bootMode: reboot
+
+    "default-hook-aarch64":
+      enabled: false
+      arch: "aarch64"
+      downloadFile: "hook_aarch64.tar.gz"
+      kernel: "vmlinuz-aarch64"
+      initrd: "initramfs-aarch64"
+      kernelCommandLine: ""
+      bootMode: reboot # kexec is no-go here, kernel problem? (persists after enabling CONFIG_KEXEC & trying to fix TB action)
 
   # Define deployment images; we've a few examples using Ubuntu and Armbian
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
@@ -90,18 +99,18 @@ provision:
       doInjectHegelCloudInit: true
       rootfsPartitionNumber: "2" # rpi image has a fat32 boot partition (config.txt and such), and partition 2 is the real ext4 rootfs
 
-    "amd64-k8s":
+    "arm64-k8s":
       enabled: false
-      arch: "x86_64"
-      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.30-armsurvivors-880/Armbian-unofficial_25.03.30-armsurvivors-880_Uefi-x86_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.qcow2.xz"
-      image: "Armbian-unofficial_25.03.30-armsurvivors-880_Uefi-x86_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.gz"
+      arch: "aarch64"
+      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.30-armsurvivors-880/Armbian-unofficial_25.03.30-armsurvivors-880_Uefi-arm64_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.qcow2.xz"
+      image: "Armbian-unofficial_25.03.30-armsurvivors-880_Uefi-arm64_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.gz"
       conversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
       doInjectHegelCloudInit: true
-      rootfsPartitionNumber: "3" #  1 is BIOS GRUB partition thing, 2 is ESP, 3 rootfs
-      espPartitionNumber: "2"
+      rootfsPartitionNumber: "2" #  1 is ESP, 2 rootfs 1 - no BIOS thing for arm64
+      espPartitionNumber: "1"
       doRestoreGRUBNormalcySeparateESP: false #!?
 
 # Generates CRs triplets with Hardware, Workflow, and Template, using by-id references to the hook and images above.
@@ -140,6 +149,19 @@ hardware:
       hookRef: "default-hook-amd64"
       imageRef: "amd64-k8s"
       extraKernelCommandLine: "console=ttyS0"
+      # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
+      # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
+
+    "vm-arm64":
+      enabled: true
+      arch: aarch64
+      mac: "vm-arm64"
+      rootDisk: "/dev/nvme0n1"
+      hookRef: "default-hook-aarch64"
+      imageRef: "arm64-k8s"
+      extraKernelCommandLine: "console=ttyAML0"
       # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
       # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
       userData: |
