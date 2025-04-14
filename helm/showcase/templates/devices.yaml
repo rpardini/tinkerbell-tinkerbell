@@ -102,7 +102,9 @@ spec:
           gateway: "{{ $dev.ipv4.gateway }}"
           {{- end }}
         lease_time: 86400
+        {{- if and $dev.ipv4 $dev.netboot }}
         mac: "{{ $dev.mac }}"
+        {{- end }}
         name_servers:
           {{- range $mergedDevice.ipv4.dns }}
           - {{ . | quote }}
