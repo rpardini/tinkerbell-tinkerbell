@@ -99,6 +99,20 @@ provision:
       doInjectHegelCloudInit: true
       rootfsPartitionNumber: "2" # rpi image has a fat32 boot partition (config.txt and such), and partition 2 is the real ext4 rootfs
 
+    "amd64-k8s":
+      enabled: false
+      arch: "x86_64"
+      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.30-armsurvivors-880/Armbian-unofficial_25.03.30-armsurvivors-880_Uefi-x86_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.qcow2.xz"
+      image: "Armbian-unofficial_25.03.30-armsurvivors-880_Uefi-x86_bookworm_edge_6.14.0-metadata-cloud-k8s-1.30.img.gz"
+      conversion: "xz-qcow2-to-img-gz"
+      doGrowPart: false # Armbian does it itself when booted
+      doUserAndSshSetup: false # Armbian does it itself when booted
+      doFixResolvConf: false
+      doInjectHegelCloudInit: true
+      rootfsPartitionNumber: "3" #  1 is BIOS GRUB partition thing, 2 is ESP, 3 rootfs
+      espPartitionNumber: "2"
+      doRestoreGRUBNormalcySeparateESP: false #!?
+
     "arm64-k8s":
       enabled: false
       arch: "aarch64"
