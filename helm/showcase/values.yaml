@@ -128,8 +128,15 @@ provision:
       doRestoreGRUBNormalcySeparateESP: false #!?
 
 # Generates CRs triplets with Hardware, Workflow, and Template, using by-id references to the hook and images above.
-
 hardware:
+  #common:
+  #  uefi: true
+  #  ipv4:
+  #    gateway: "192.168.66.1" # Must be set, otherwise no internet access; can be overriden per-device
+  #    netmask: "255.255.255.0"
+  #    dns: [ "192.168.66.1" ]
+  #    time_servers: [ "192.168.66.1" ]
+
   devices: # One entry for each machine
 
     "quartz64a":
@@ -176,6 +183,8 @@ hardware:
       hookRef: "default-hook-aarch64"
       imageRef: "arm64-k8s"
       extraKernelCommandLine: "console=ttyAML0"
+      ipv4:
+        address: 192.168.66.10 # not true, its just the host running the VM
       # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
       # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
       userData: |
