@@ -56,6 +56,20 @@ func (b *Backend) GetEC2Instance(ctx context.Context, ip string) (data.Ec2Instan
 	return toEC2Instance(*hw), nil
 }
 
+// GetEC2InstanceByMetadataToken satisfies ec2.Client.
+func (b *Backend) GetEC2InstanceByMetadataToken(ctx context.Context, token string) (data.Ec2Instance, error) {
+	hw, err := b.hwByMetadataToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return data.Ec2Instance{}, ErrInstanceNotFound
+		}
+
+		return data.Ec2Instance{}, err
+	}
+
+	return toEC2Instance(*hw), nil
+}
+
 func toEC2Instance(hw v1alpha1.Hardware) data.Ec2Instance {
 	var i data.Ec2Instance
 
@@ -131,6 +145,37 @@ func (b *Backend) hwByIP(ctx context.Context, ip string) (*v1alpha1.Hardware, er
 
 	if len(hardwareList.Items) > 1 {
 		err := fmt.Errorf("got %d hardware objects for ip: %s, expected only 1", len(hardwareList.Items), ip)
+		span.SetStatus(codes.Error, err.Error())
+
+		return nil, err
+	}
+
+	span.SetStatus(codes.Ok, "")
+
+	return &hardwareList.Items[0], nil
+}
+
+func (b *Backend) hwByMetadataToken(ctx context.Context, token string) (*v1alpha1.Hardware, error) {
+	tracer := otel.Tracer(tracerName)
+	ctx, span := tracer.Start(ctx, "backend.kube.hwByMetadataToken")
+	defer span.End()
+	hardwareList := &v1alpha1.HardwareList{}
+
+	if err := b.cluster.GetClient().List(ctx, hardwareList, &client.MatchingFields{MetadataTokenIndex: token}); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+
+		return nil, fmt.Errorf("failed listing hardware for token (%v): %w", token, err)
+	}
+
+	if len(hardwareList.Items) == 0 {
+		err := hardwareNotFoundError{name: token, namespace: ternary(b.Namespace == "", "all namespaces", b.Namespace)}
+		span.SetStatus(codes.Error, err.Error())
+
+		return nil, err
+	}
+
+	if len(hardwareList.Items) > 1 {
+		err := fmt.Errorf("got %d hardware objects for token: %s, expected only 1", len(hardwareList.Items), token)
 		span.SetStatus(codes.Error, err.Error())
 
 		return nil, err

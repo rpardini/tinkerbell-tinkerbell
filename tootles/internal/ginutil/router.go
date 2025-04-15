@@ -10,7 +10,8 @@ import (
 // has a corresponding alternate route with or without, dependent on the endpoint being registered,
 // a trailing slash.
 type TrailingSlashRouteHelper struct {
-	gin.IRouter
+	GroupedRouter gin.IRouter
+	RootRouter    gin.IRouter
 }
 
 // GET overrides the internal gin.IRouter GET. It interrogates endpoint for a trailing slash. If
@@ -28,7 +29,12 @@ func (r TrailingSlashRouteHelper) GET(endpoint string, handler ...gin.HandlerFun
 		alternateEndpoint = endpoint + "/"
 	}
 
-	return r.IRouter.
+	r.RootRouter.
+		GET("/tootles/token/:token/2009-04-04"+alternateEndpoint, handler...).
+		GET("/tootles/token/:token/2009-04-04"+endpoint, handler...)
+
+	// Also add a /tootles/token/:token endpoint; this is used for non-IP-address-available serving.
+	return r.GroupedRouter.
 		GET(endpoint, handler...).
 		GET(alternateEndpoint, handler...)
 }
