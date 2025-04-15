@@ -263,7 +263,7 @@ spec:
               CONTENTS: |
                 datasource:
                   Ec2:
-                    metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}"]
+                    metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}/tootles/token/abc"]
                     strict_id: false
                 manage_etc_hosts: localhost
                 warnings:
