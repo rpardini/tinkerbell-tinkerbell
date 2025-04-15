@@ -160,6 +160,7 @@ type HardwareMetadata struct {
 	Instance     *MetadataInstance     `json:"instance,omitempty"`
 	Custom       *MetadataCustom       `json:"custom,omitempty"`
 	Facility     *MetadataFacility     `json:"facility,omitempty"`
+	Token        string                `json:"token,omitempty"`
 }
 
 type MetadataManufacturer struct {
