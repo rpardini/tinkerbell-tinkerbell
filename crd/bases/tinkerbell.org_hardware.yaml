@@ -354,6 +354,8 @@ spec:
                     type: object
                   state:
                     type: string
+                  token:
+                    type: string
                 type: object
               resources:
                 additionalProperties:
