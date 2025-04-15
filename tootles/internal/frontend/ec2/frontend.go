@@ -24,6 +24,9 @@ type Client interface {
 	// GetEC2Instance retrieves an Instance associated with ip. If no Instance can be
 	// found, it should return ErrInstanceNotFound.
 	GetEC2Instance(_ context.Context, ip string) (data.Ec2Instance, error)
+	// GetEC2InstanceByMetadataToken retrieves an Instance associated with a metadata token. If no Instance can be
+	// found, it should return ErrInstanceNotFound.
+	GetEC2InstanceByMetadataToken(_ context.Context, token string) (data.Ec2Instance, error)
 }
 
 // Frontend is an EC2 HTTP API frontend. It is responsible for configuring routers with handlers
@@ -45,9 +48,9 @@ func New(client Client) Frontend {
 func (f Frontend) Configure(router gin.IRouter) {
 	// Setup the 2009-04-04 API path prefix and use a trailing slash route helper to patch
 	// equivalent trailing slash routes.
-	v20090404 := ginutil.TrailingSlashRouteHelper{IRouter: router.Group("/2009-04-04")}
+	v20090404 := ginutil.TrailingSlashRouteHelper{RootRouter: router, GroupedRouter: router.Group("/2009-04-04")}
 
-	dataEndpointBinder := func(router gin.IRouter, endpoint string, filter filterFunc) {
+	dataEndpointBinder := func(router ginutil.TrailingSlashRouteHelper, endpoint string, filter filterFunc) {
 		router.GET(endpoint, func(ctx *gin.Context) {
 			instance, err := f.getInstance(ctx, ctx.Request)
 			if err != nil {
@@ -78,7 +81,7 @@ func (f Frontend) Configure(router gin.IRouter) {
 		staticRoutes.FromEndpoint(r.Endpoint)
 	}
 
-	staticEndpointBinder := func(router gin.IRouter, endpoint string, childEndpoints []string) {
+	staticEndpointBinder := func(router ginutil.TrailingSlashRouteHelper, endpoint string, childEndpoints []string) {
 		router.GET(endpoint, func(ctx *gin.Context) {
 			ctx.String(http.StatusOK, join(childEndpoints))
 		})
@@ -89,9 +92,29 @@ func (f Frontend) Configure(router gin.IRouter) {
 	}
 }
 
-// getInstance is a framework agnostic method for retrieving Instance data based on a remote
-// address.
-func (f Frontend) getInstance(ctx context.Context, r *http.Request) (data.Ec2Instance, error) {
+// getInstance is a gin-specific method for retrieving Instance data based on a remote
+// address or a token identifier included in the request path.
+func (f Frontend) getInstance(ctx *gin.Context, r *http.Request) (data.Ec2Instance, error) {
+	// If the request path (uri) begins with /tootles/token, we should look up the token that is the 3rd path component, mapped as :token.
+	// The request's source (IP address) is ignored in this case.
+	if strings.HasPrefix(r.URL.Path, "/tootles/token/") {
+		token := ctx.Param("token")
+		if strings.TrimSpace(token) == "" {
+			return data.Ec2Instance{}, httperror.New(http.StatusNotFound, "token not looked up as it is invalid")
+		}
+
+		instance, err := f.client.GetEC2InstanceByMetadataToken(ctx, token)
+		if err != nil {
+			if errors.Is(err, ErrInstanceNotFound) || apierrors.IsNotFound(err) {
+				return data.Ec2Instance{}, httperror.New(http.StatusNotFound, fmt.Sprintf("no hardware found for source token: '%s'", token))
+			}
+			return data.Ec2Instance{}, httperror.Wrap(http.StatusInternalServerError, err)
+		}
+
+		return instance, nil
+	}
+
+	// Normal IP based lookup. SNAT, proxies, externalTrafficPolicy:Cluster, misconfigured X-Forwarded-For headers, etc are all in play here.
 	ip, err := request.RemoteAddrIP(r)
 	if err != nil {
 		return data.Ec2Instance{}, httperror.New(http.StatusBadRequest, "invalid remote addr")
