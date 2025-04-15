@@ -24,6 +24,9 @@ type Client interface {
 	// GetEC2Instance retrieves an Instance associated with ip. If no Instance can be
 	// found, it should return ErrInstanceNotFound.
 	GetEC2Instance(_ context.Context, ip string) (data.Ec2Instance, error)
+	// GetEC2InstanceByMetadataToken retrieves an Instance associated with a metadata token. If no Instance can be
+	// found, it should return ErrInstanceNotFound.
+	GetEC2InstanceByMetadataToken(_ context.Context, token string) (data.Ec2Instance, error)
 }
 
 // Frontend is an EC2 HTTP API frontend. It is responsible for configuring routers with handlers
@@ -46,26 +49,7 @@ func (f Frontend) Configure(router gin.IRouter) {
 	// Setup the 2009-04-04 API path prefix and use a trailing slash route helper to patch
 	// equivalent trailing slash routes.
 	v20090404 := ginutil.TrailingSlashRouteHelper{IRouter: router.Group("/2009-04-04")}
-
-	dataEndpointBinder := func(router gin.IRouter, endpoint string, filter filterFunc) {
-		router.GET(endpoint, func(ctx *gin.Context) {
-			instance, err := f.getInstance(ctx, ctx.Request)
-			if err != nil {
-				// If there's an error containing an http status code, use that status code else
-				// assume its an internal server error.
-				var httpErr *httperror.E
-				if errors.As(err, &httpErr) {
-					_ = ctx.AbortWithError(httpErr.StatusCode, err)
-				} else {
-					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
-				}
-
-				return
-			}
-
-			ctx.String(http.StatusOK, filter(instance))
-		})
-	}
+	v20090404viaToken := ginutil.TrailingSlashRouteHelper{IRouter: router.Group("/tootles/token/:token/2009-04-04")}
 
 	// Create a static route builder that we can add all data routes to which are the basis for
 	// all static routes.
@@ -74,11 +58,20 @@ func (f Frontend) Configure(router gin.IRouter) {
 	// Configure all dynamic routes. Dynamic routes are anything that requires retrieving a specific
 	// instance and returning data from it.
 	for _, r := range dataRoutes {
-		dataEndpointBinder(v20090404, r.Endpoint, r.Filter)
+		v20090404.GET(r.Endpoint, func(ctx *gin.Context) {
+			instance, getInstanceErr := f.getInstanceViaIP(ctx, ctx.Request)
+			f.writeInstanceDataOrErrToHTTP(ctx, getInstanceErr, r.Filter(instance))
+		})
+
+		v20090404viaToken.GET(r.Endpoint, func(ctx *gin.Context) {
+			instance, getInstanceErr := f.getInstanceViaToken(ctx)
+			f.writeInstanceDataOrErrToHTTP(ctx, getInstanceErr, r.Filter(instance))
+		})
+
 		staticRoutes.FromEndpoint(r.Endpoint)
 	}
 
-	staticEndpointBinder := func(router gin.IRouter, endpoint string, childEndpoints []string) {
+	staticEndpointBinder := func(router ginutil.TrailingSlashRouteHelper, endpoint string, childEndpoints []string) {
 		router.GET(endpoint, func(ctx *gin.Context) {
 			ctx.String(http.StatusOK, join(childEndpoints))
 		})
@@ -86,12 +79,31 @@ func (f Frontend) Configure(router gin.IRouter) {
 
 	for _, r := range staticRoutes.Build() {
 		staticEndpointBinder(v20090404, r.Endpoint, r.Children)
+		staticEndpointBinder(v20090404viaToken, r.Endpoint, r.Children)
 	}
 }
 
+// Shared across IP and Token-based routes.
+func (f Frontend) writeInstanceDataOrErrToHTTP(ctx *gin.Context, getInstanceErr error, filteredInstanceData string) {
+	if getInstanceErr != nil {
+		// If there's an error containing an http status code, use that status code else assume it is an internal server error.
+		var httpErr *httperror.E
+		if errors.As(getInstanceErr, &httpErr) {
+			_ = ctx.AbortWithError(httpErr.StatusCode, getInstanceErr)
+		} else {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, getInstanceErr)
+		}
+
+		return
+	}
+	// Simply output the filtered instance data with a 200 OK status code.
+	ctx.String(http.StatusOK, filteredInstanceData)
+}
+
 // getInstance is a framework agnostic method for retrieving Instance data based on a remote
-// address.
-func (f Frontend) getInstance(ctx context.Context, r *http.Request) (data.Ec2Instance, error) {
+// address. Normal IP based lookup. SNAT, proxies, externalTrafficPolicy:Cluster, possibly
+// misconfigured X-Forwarded-For headers, etc are all in play here.
+func (f Frontend) getInstanceViaIP(ctx context.Context, r *http.Request) (data.Ec2Instance, error) {
 	ip, err := request.RemoteAddrIP(r)
 	if err != nil {
 		return data.Ec2Instance{}, httperror.New(http.StatusBadRequest, "invalid remote addr")
@@ -105,6 +117,25 @@ func (f Frontend) getInstance(ctx context.Context, r *http.Request) (data.Ec2Ins
 
 		// TODO(chrisdoherty4) What happens when multiple Instance could be returned? What
 		// is the behavior of GetEC2Instance?
+		return data.Ec2Instance{}, httperror.Wrap(http.StatusInternalServerError, err)
+	}
+
+	return instance, nil
+}
+
+// getInstanceViaToken is a gin-specific method for retrieving Instance data based on a remote
+// address or a token identifier included in the request path.
+func (f Frontend) getInstanceViaToken(ctx *gin.Context) (data.Ec2Instance, error) {
+	token := ctx.Param("token")
+	if strings.TrimSpace(token) == "" {
+		return data.Ec2Instance{}, httperror.New(http.StatusNotFound, "token not looked up as it is invalid")
+	}
+
+	instance, err := f.client.GetEC2InstanceByMetadataToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, ErrInstanceNotFound) || apierrors.IsNotFound(err) {
+			return data.Ec2Instance{}, httperror.New(http.StatusNotFound, fmt.Sprintf("no hardware found for source token: '%s'", token))
+		}
 		return data.Ec2Instance{}, httperror.Wrap(http.StatusInternalServerError, err)
 	}
 
