@@ -29,11 +29,11 @@ func TestTrailingSlashRouteHelper(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			router := ginutil.TrailingSlashRouteHelper{gin.New()}
+			router := ginutil.TrailingSlashRouteHelper{GroupedRouter: gin.New(), RootRouter: gin.New()}
 
 			// Create a variable that is the gin.Engine so we can call ServeHTTP on it as IRouter
 			// doesn't have that API.
-			servable := router.IRouter.(*gin.Engine)
+			servable := router.GroupedRouter.(*gin.Engine)
 
 			// Cache the total number of calls.
 			var calls int
