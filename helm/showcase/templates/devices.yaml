@@ -352,8 +352,6 @@ spec:
                 echo 'GRUB_CMDLINE_LINUX_DEFAULT="${GRUB_CMDLINE_LINUX_DEFAULT} {{$mergedDevice.extraKernelCommandLine}}" # Added "{{$mergedDevice.extraKernelCommandLine}}" by tinkerbell action' > /etc/default/grub.d/99-provisioned.cfg
                 ls -lat /etc/default/grub.d
                 cat /etc/default/grub.d/99-provisioned.cfg
-                mv -v /etc/os-release /etc/os-release.hold
-                echo 'NAME={{$mergedDevice.imageRef}}' > /etc/os-release
                 grub-install --efi-directory /boot/efi '--bootloader-id={{$mergedDevice.imageRef}}'
                 update-grub || { echo 'update-grub failed! showing /boot/grub/grub.cfg.new'; cat /boot/grub/grub.cfg.new || true; echo 'update-grub failed!'; exit 66; }
                 tree /boot || true
@@ -361,7 +359,6 @@ spec:
                 efibootmgr --verbose || true
                 umount /sys/firmware/efi/efivars
                 umount /boot/efi
-                mv -v /etc/os-release.hold /etc/os-release
                 sync
           {{- end }}
 

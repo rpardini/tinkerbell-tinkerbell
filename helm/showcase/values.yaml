@@ -86,6 +86,7 @@ provision:
       doFixResolvConf: false
       doInjectHegelCloudInit: true
       rootfsPartitionNumber: "1" # rootfs is the one and only
+      # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
 
     "rpi4b-k8s":
       enabled: false
@@ -111,7 +112,7 @@ provision:
       doInjectHegelCloudInit: true
       rootfsPartitionNumber: "3" #  1 is BIOS GRUB partition thing, 2 is ESP, 3 rootfs
       espPartitionNumber: "2"
-      doRestoreGRUBNormalcySeparateESP: false #!?
+      doRestoreGRUBNormalcySeparateESP: true # rebuilts initrd and configs GRUB with extra kernel command line options; installs grub to EFI nvram
 
     "arm64-k8s":
       enabled: false
@@ -122,10 +123,10 @@ provision:
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
-      doInjectHegelCloudInit: true
+      doInjectHegelCloudInit: true # yes, with token
       rootfsPartitionNumber: "2" #  1 is ESP, 2 rootfs 1 - no BIOS thing for arm64
       espPartitionNumber: "1"
-      doRestoreGRUBNormalcySeparateESP: false #!?
+      doRestoreGRUBNormalcySeparateESP: true # rebuilts initrd and configs GRUB with extra kernel command line options; installs grub to EFI nvram
 
 # Generates CRs triplets with Hardware, Workflow, and Template, using by-id references to the hook and images above.
 hardware:
@@ -182,7 +183,7 @@ hardware:
       rootDisk: "/dev/nvme0n1"
       hookRef: "default-hook-aarch64"
       imageRef: "arm64-k8s"
-      extraKernelCommandLine: "console=ttyAML0"
+      extraKernelCommandLine: "console=ttyAMA0"
       ipv4:
         address: 192.168.66.10 # not true, its just the host running the VM
       # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
