@@ -72,6 +72,7 @@ spec:
   userData: |
     {{- $mergedDevice.userData | default "#!/bin/bash\necho 'tinkerbell-showcase: userData not configured for device' >&2;" | nindent 4 }}
   metadata:
+    token: {{ $dev.mac | sha1sum | quote }}
     facility:
       facility_code: tinkerbell-showcase
       plan_slug: "{{$deviceId}}"
@@ -263,7 +264,7 @@ spec:
               CONTENTS: |
                 datasource:
                   Ec2:
-                    metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}/tootles/token/abc"]
+                    metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}/tootles/token/{{ $dev.mac | sha1sum }}"]
                     strict_id: false
                 manage_etc_hosts: localhost
                 warnings:
