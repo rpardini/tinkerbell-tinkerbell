@@ -35,7 +35,7 @@ binaries=(
 
 git_email="github-actions[bot]@users.noreply.github.com"
 git_name="github-actions[bot]"
-repo="tinkerbell/tinkerbell"
+repo="${IPXE_TARGET_GH_OWNER_REPO:-"tinkerbell/tinkerbell"}"
 
 # check for the GITHUB_TOKEN environment variable
 function check_github_token() {
