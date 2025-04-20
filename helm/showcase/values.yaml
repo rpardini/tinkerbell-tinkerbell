@@ -75,6 +75,19 @@ provision:
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
   # to download/prepare it even if no device is using it.
   images:
+    "nanopct6lts-k8s":
+      enabled: false
+      arch: "aarch64"
+      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.04.20-armsurvivors-917/Armbian-unofficial_25.04.20-armsurvivors-917_Nanopct6-lts_bookworm_edge_6.14.3-metadata-cloud-k8s-1.30.img.xz"
+      image: "Armbian-unofficial_25.04.20-armsurvivors-917_Nanopct6-lts_bookworm_edge_6.14.3-metadata-cloud-k8s-1.30.img.gz"
+      conversion: "xz-qcow2-to-img-gz"
+      doGrowPart: false # Armbian does it itself when booted
+      doUserAndSshSetup: false # Armbian does it itself when booted
+      doFixResolvConf: false
+      doInjectHegelCloudInit: true
+      rootfsPartitionNumber: "1" # rootfs is the one and only
+      # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
+
     "quartz64a-k8s":
       enabled: false
       arch: "aarch64"
@@ -91,8 +104,8 @@ provision:
     "rpi4b-k8s":
       enabled: false
       arch: "aarch64"
-      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.03.30-armsurvivors-880/Armbian-unofficial_25.03.30-armsurvivors-880_Rpi4b_bookworm_current_6.12.20-metadata-cloud-k8s-1.30.img.xz"
-      image: "Armbian-unofficial_25.03.30-armsurvivors-880_Rpi4b_bookworm_current_6.12.20-metadata-cloud-k8s-1.30.img.gz"
+      downloadURL: "https://github.com/armsurvivors/armbian-release/releases/download/25.04.20-armsurvivors-917/Armbian-unofficial_25.04.20-armsurvivors-917_Rpi4b_bookworm_current_6.12.22-metadata-cloud-k8s-1.30.img.xz"
+      image: "Armbian-unofficial_25.04.20-armsurvivors-917_Rpi4b_bookworm_current_6.12.22-metadata-cloud-k8s-1.30.img.gz"
       conversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
@@ -150,6 +163,17 @@ hardware:
       extraKernelCommandLine: "console=ttyS2,1500000"
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/quartz64a_tinkerbell_l3
+
+    "nanopct6lts":
+      enabled: true
+      arch: aarch64
+      mac: "nanopct6lts" # not really a MAC, instead an ID
+      rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
+      hookRef: "armbian-rockchip64-edge"
+      imageRef: "nanopct6lts-k8s"
+      extraKernelCommandLine: "console=ttyS2,1500000"
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
 
     # Raspberry Pi 4B (bcm2711)
     "rpi":
