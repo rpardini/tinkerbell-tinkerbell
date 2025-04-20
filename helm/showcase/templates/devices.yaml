@@ -1,10 +1,10 @@
 {{- range $deviceId, $dev := .Values.hardware.devices }}
-
+---
 {{- if not $dev.enabled }}
-  # Device not enabled: {{$deviceId}}
+# Device not enabled: {{$deviceId}}
 {{- else }}
-  # Device enabled: {{$deviceId}}
-{{- $common := $.Values.hardware.common -}}
+# Device enabled: {{$deviceId}}
+{{- $common := $.Values.hardware.common }}
 {{- $mergedDevice := merge $dev $common }}
   # Getting hook from hookRef: '{{$mergedDevice.hookRef}}'
 {{- if not $mergedDevice.hookRef }}{{- fail (printf "Device '%s', hookRef '%s': %s" $deviceId $mergedDevice.hookRef "hookRef unset?") }}{{- end }}
@@ -52,6 +52,14 @@
 {{- end }}
 {{- end }}
   # Thus at the end of the day, $rootDiskRootfsPartitionDevice is {{$rootDiskRootfsPartitionDevice}} and ESP is {{$espPartitionDevice}}
+
+{{- $imageObj = merge $imageObj $common }}
+{{- if or (not $imageObj.downloadURL) (not $imageObj.image) (not $imageObj.conversion) }}
+  {{- $tmpDownFn := (printf "%s%s_%s_%s_%s-%s%s" $imageObj.armbianImageVendor $imageObj.armbianImageRevision $imageObj.armbianImageBoard $imageObj.armbianImageRelease $imageObj.armbianImageBranch $imageObj.armbianImageVariant $imageObj.armbianImageFormat) }}
+  {{- $tmpDownUrl := (printf "https://github.com/%s/releases/download/%s/%s.xz" $imageObj.armbianImageOwnerRepo $imageObj.armbianImageRevision $tmpDownFn) }}
+  {{- $imageObj = merge (dict "conversion" $imageObj.armbianImageConversion "image" (printf "%s.gz" $tmpDownFn) "downloadURL" $tmpDownUrl) $imageObj }}
+{{- end }}
+
 ---
 apiVersion: "tinkerbell.org/v1alpha1"
 kind: Hardware
@@ -164,10 +172,12 @@ spec:
             environment:
               DEST_DISK: "{{ $rootDiskDevice }}"
               IMG_URL: "{{ $.Values.tinkerbell.imagesURL }}/{{ $imageObj.image }}"
+              {{- if $imageObj.conversion }}
               {{- if not (regexMatch "-nogz$" $imageObj.conversion) }}
               COMPRESSED: true # because {{ $imageObj.conversion }}
               {{- else }}
               COMPRESSED: false # cos {{ $imageObj.conversion }}
+              {{- end }}
               {{- end }}
 
           {{- if $imageObj.doGrowPart }}
