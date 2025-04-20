@@ -1,29 +1,36 @@
 {{- if .Values.jobs.enabled }}
 {{- if .Values.jobs.images.enabled }}
-{{- range $imageId, $image := .Values.provision.images }}
+{{- range $imageObjId, $imageObj := .Values.provision.images }}
+  {{- $common := $.Values.provision.common -}}
+  {{- $imageObj = merge $imageObj $common }}
+  {{- if or (not $imageObj.downloadURL) (not $imageObj.image) (not $imageObj.conversion) }}
+    {{- $tmpDownFn := (printf "%s%s_%s_%s_%s-%s%s" $imageObj.armbianImageVendor $imageObj.armbianImageRevision $imageObj.armbianImageBoard $imageObj.armbianImageRelease $imageObj.armbianImageBranch $imageObj.armbianImageVariant $imageObj.armbianImageFormat) }}
+    {{- $tmpDownUrl := (printf "https://github.com/%s/releases/download/%s/%s.xz" $imageObj.armbianImageOwnerRepo $imageObj.armbianImageRevision $tmpDownFn) }}
+    {{- $imageObj = merge (dict "conversion" $imageObj.armbianImageConversion "image" (printf "%s.gz" $tmpDownFn) "downloadURL" $tmpDownUrl) $imageObj }}
+  {{- end }}
 ---
-# --> ImageId: {{ $imageId }}
-  # downloadUrl: "{{ $image.downloadURL }}"
-  # image: "{{ $image.image }}"
-  # conversion: "{{ $image.conversion }}"
-{{- $hash :=  trunc 8 (sha1sum (printf "%s-%s-%s" $image.downloadURL $image.image $image.conversion )) }}
-# Loop over $.Values.hardware.devices (a dictionary) and for each value, check if it's imageRef matches this $imageId - if so, enable this image.
+# --> ImageId: {{ $imageObjId }}
+  # downloadUrl: "{{ $imageObj.downloadURL }}"
+  # image: "{{ $imageObj.image }}"
+  # conversion: "{{ $imageObj.conversion }}"
+{{- $hash :=  trunc 8 (sha1sum (printf "%s-%s-%s" $imageObj.downloadURL $imageObj.image $imageObj.conversion )) }}
+# Loop over $.Values.hardware.devices (a dictionary) and for each value, check if it's imageRef matches this $imageObjId - if so, enable this image.
 {{- $enabledByDeviceUsage := false }}
 {{- range $device := $.Values.hardware.devices }}
-# Testing {{$device.imageRef}} against {{$imageId}}...
-{{- if and $device.enabled (eq $device.imageRef $imageId) -}}
+# Testing {{$device.imageRef}} against {{$imageObjId}}...
+{{- if and $device.enabled (eq $device.imageRef $imageObjId) -}}
 # YES!
 {{- $enabledByDeviceUsage = true -}}
 {{- else -}}
 # NO!
 {{- end -}}
 {{- end }}
-{{- if or $enabledByDeviceUsage $image.enabled }}
-# ImageId: {{ $imageId }} - force enabled? {{ $image.enabled }} -- enabled by device usage? {{ $enabledByDeviceUsage }}
+{{- if or $enabledByDeviceUsage $imageObj.enabled }}
+# ImageId: {{ $imageObjId }} - force enabled? {{ $imageObj.enabled }} -- enabled by device usage? {{ $enabledByDeviceUsage }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "download-image-{{$imageId}}-{{$hash}}"
+  name: "download-image-{{$imageObjId}}-{{$hash}}"
   {{- if $.Values.forceNamespace }}
   namespace: "{{ $.Values.forceNamespace }}"
   {{- end }}
@@ -39,7 +46,7 @@ data:
     https://dl-cdn.alpinelinux.org/alpine/v$(cut -d'.' -f1,2 /etc/alpine-release)/community/
     https://dl-cdn.alpinelinux.org/alpine/edge/community/
     EOF
-    {{- if eq "qemu-to-raw-gzip" $image.conversion }}
+    {{- if eq "qemu-to-raw-gzip" $imageObj.conversion }}
     # This script is designed to download a cloud image file (.img) and then convert it to a .raw.gz file.
     # This is purpose built so non-raw cloud image files can be used with the "image2disk" action.
     # See https://artifacthub.io/packages/tbaction/tinkerbell-community/image2disk.
@@ -58,10 +65,10 @@ data:
     fi
     {{- end }}
 
-    {{- if eq "none" $image.conversion }}
+    {{- if eq "none" $imageObj.conversion }}
     # No conversion, just a simple download; image must be in raw format, possibly compressed.
-    image_url="{{ $image.downloadURL }}"
-    file="/output/{{ $image.image }}"
+    image_url="{{ $imageObj.downloadURL }}"
+    file="/output/{{ $imageObj.image }}"
     if [[ ! -f "$file" ]]; then
       echo "Image file $file does not exist. Downloading...."
       wget "$image_url" -O "${file}.tmp"
@@ -72,10 +79,10 @@ data:
     fi
     {{- end }}
 
-    {{- if eq "xz-to-gz" $image.conversion }}
+    {{- if eq "xz-to-gz" $imageObj.conversion }}
     # Download, then produce a .gz file from a .xz file, using pigz and pixz, and using a pipe.
-    image_url="{{ $image.downloadURL }}"
-    file="/output/{{ $image.image }}"
+    image_url="{{ $imageObj.downloadURL }}"
+    file="/output/{{ $imageObj.image }}"
     if [[ ! -f "$file" ]]; then
       echo "Image file $file does not exist. Downloading...."
       apk add --update pigz pixz
@@ -90,10 +97,10 @@ data:
     fi
     {{- end }}
 
-    {{- if eq "xz-qcow2-to-img-gz" $image.conversion }}
+    {{- if eq "xz-qcow2-to-img-gz" $imageObj.conversion }}
     # Download, decompress xz, convert qcow2 to img, compress img to gz.
-    image_url="{{ $image.downloadURL }}"
-    file="/output/{{ $image.image }}"
+    image_url="{{ $imageObj.downloadURL }}"
+    file="/output/{{ $imageObj.image }}"
     if [[ ! -f "$file" ]]; then
       echo "Image file $file does not exist. Downloading...."
       apk add --update pigz pixz qemu-img
@@ -113,10 +120,10 @@ data:
     fi
     {{- end }}
 
-    {{- if eq "xz-qcow2-to-img-nogz" $image.conversion }}
+    {{- if eq "xz-qcow2-to-img-nogz" $imageObj.conversion }}
     # Download, decompress xz, convert qcow2 to img, NO compression of final artifact.
-    image_url="{{ $image.downloadURL }}"
-    file="/output/{{ $image.image }}"
+    image_url="{{ $imageObj.downloadURL }}"
+    file="/output/{{ $imageObj.image }}"
     if [[ ! -f "$file" ]]; then
       echo "Image file $file does not exist. Downloading...."
       apk add --update pigz pixz qemu-img
@@ -135,10 +142,10 @@ data:
     fi
     {{- end }}
 
-    {{- if eq "download-only" $image.conversion }}
+    {{- if eq "download-only" $imageObj.conversion }}
     # Download only. Image is already in format necessary.
-    image_url="{{ $image.downloadURL }}"
-    file="/output/{{ $image.image }}"
+    image_url="{{ $imageObj.downloadURL }}"
+    file="/output/{{ $imageObj.image }}"
     if [[ ! -f "$file" ]]; then
       echo "Download-only Image file $file does not exist. Downloading...."
       wget "$image_url" -O "${file}.tmp"
@@ -151,10 +158,10 @@ data:
     fi
     {{- end }}
 
-    {{- if eq "local" $image.conversion }}
+    {{- if eq "local" $imageObj.conversion }}
     # Not even download anything. Image should be in there already somehow.
-    image_url="{{ $image.downloadURL }}"
-    file="/output/{{ $image.image }}"
+    image_url="{{ $imageObj.downloadURL }}"
+    file="/output/{{ $imageObj.image }}"
     if [[ ! -f "$file" ]]; then
       echo "Image file $file does not exist. Please deploy image file manually, or use a different conversion than none. Sleeping 10s and exiting with error 66."
       sleep 10
@@ -168,7 +175,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "download-image-{{$imageId}}-{{$hash}}"
+  name: "download-image-{{$imageObjId}}-{{$hash}}"
   {{- if $.Values.forceNamespace }}
   namespace: "{{ $.Values.forceNamespace }}"
   {{- end }}
@@ -189,12 +196,12 @@ spec:
         {{- end }}
       {{- end }}
       containers:
-        - name: download-{{$imageId}}
+        - name: download-{{$imageObjId}}
           image: bash:5
           command: [ "/script/entrypoint.sh" ]
           args:
             [
-              "{{$image.downloadURL}}",
+              "{{$imageObj.downloadURL}}",
               "/output",
             ]
           volumeMounts:
@@ -211,9 +218,9 @@ spec:
         - name: configmap-volume
           configMap:
             defaultMode: 0700
-            name: "download-image-{{$imageId}}-{{$hash}}"
+            name: "download-image-{{$imageObjId}}-{{$hash}}"
 {{- else }}
-# ImageId: {{ $imageId }} DISABLED - force enabled? {{ $image.enabled }} -- enabled by device usage? {{ $enabledByDeviceUsage }}
+# ImageId: {{ $imageObjId }} DISABLED - force enabled? {{ $imageObj.enabled }} -- enabled by device usage? {{ $enabledByDeviceUsage }}
 {{- end }}
 {{- end }}
 {{- end }}
