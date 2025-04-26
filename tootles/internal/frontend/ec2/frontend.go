@@ -100,10 +100,9 @@ func (f Frontend) handleIfNotError(ctx *gin.Context, err error, filter filterFun
 	ctx.String(http.StatusOK, filter(instance))
 }
 
-// getInstanceViaIP is a gin-specific method for retrieving Instance data based on a remote
-// address or a token identifier included in the request path.
-func (f Frontend) getInstanceViaIP(ctx *gin.Context, r *http.Request) (data.Ec2Instance, error) {
-	// Normal IP based lookup. SNAT, proxies, externalTrafficPolicy:Cluster, misconfigured X-Forwarded-For headers, etc are all in play here.
+// getInstance is a framework agnostic method for retrieving Instance data based on a remote
+// address.
+func (f Frontend) getInstance(ctx context.Context, r *http.Request) (data.Ec2Instance, error) {
 	ip, err := request.RemoteAddrIP(r)
 	if err != nil {
 		return data.Ec2Instance{}, httperror.New(http.StatusBadRequest, "invalid remote addr")
