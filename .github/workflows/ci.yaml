@@ -97,10 +97,18 @@ jobs:
 
       - name: Lint and Template Helm chart
         run: |
+          # Preparation for the -crds Chart: copy the CRD files from crd/bases to helm/tinkerbell-crds/crds/
+          mkdir -p helm/tinkerbell-crds/crds
+          cp -v crd/bases/* helm/tinkerbell-crds/crds/
+          
+          # Same for the regular tinkerbell chart: copy the CRD files from crd/bases to helm/tinkerbell/crds/
+          mkdir -p helm/tinkerbell/crds
+          cp -v crd/bases/* helm/tinkerbell/crds/
+          
           declare -a charts=()
-          # find and add every dir under helm/ directory; use mapfile to remove helm/ prefix
+          # find and add every dir under helm/ directory; use mapfile, find and sed to remove helm/ prefix
           mapfile -t charts < <(find helm -mindepth 1 -maxdepth 1 -type d | sed 's|^helm/||')
-          # for each chart, run helm package and helm push
+          # for each chart, update dependencies, lint and template to make sure they work.
           for chart in "${charts[@]}"; do
               echo "--> Validating chart '${chart}'"
               helm dependency update "helm/${chart}" || true
@@ -257,6 +265,18 @@ jobs:
       - name: Replace Version and images references in Helm charts
         run: |
           #/bin/bash
+
+          # Preparation for the -crds Chart: copy the CRD files from crd/bases to helm/tinkerbell-crds/crds/
+          mkdir -p helm/tinkerbell-crds/crds
+          cp -v crd/bases/* helm/tinkerbell-crds/crds/
+          
+          # Same for the regular tinkerbell chart: copy the CRD files from crd/bases to helm/tinkerbell/crds/
+          mkdir -p helm/tinkerbell/crds
+          cp -v crd/bases/* helm/tinkerbell/crds/
+          
+          git add . || true
+          git commit -m "Update CRDs" || true
+
           # install the very latest version of yq
           wget "https://github.com/mikefarah/yq/releases/download/v4.45.1/yq_linux_amd64" -O /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
@@ -277,7 +297,7 @@ jobs:
         run: |
           set -x
           declare -a charts=()
-          # find and add every dir under helm/ directory; use mapfile to remove helm/ prefix
+          # find and add every dir under helm/ directory; use mapfile, find and sed remove helm/ prefix
           mapfile -t charts < <(find helm -mindepth 1 -maxdepth 1 -type d | sed 's|^helm/||')
           # for each chart, run helm package and helm push
           for chart in "${charts[@]}"; do
