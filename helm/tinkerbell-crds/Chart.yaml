@@ -1,0 +1,7 @@
+apiVersion: v2
+name: tinkerbell-crds
+description: A Helm chart containing the Custom Resource Definitions (CRDs) for Tinkerbell
+icon: https://github.com/tinkerbell/artwork/blob/6f07de53d75cb8932dbc7d14201e038cf3a3b230/Tinkerbell-Icon-Dark.png
+type: application
+version: 0.0.1
+appVersion: "0.0.1"
