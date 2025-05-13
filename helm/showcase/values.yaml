@@ -125,18 +125,6 @@ provision:
       doInjectHegelCloudInit: true
       rootfsPartitionNumber: "1" # rootfs is the one and only
 
-    "blade3-legacy-k8s":
-      enabled: false
-      arch: "aarch64"
-      armbianImageBoard: "mixtile-blade3"
-      armbianImageBranch: "legacy"
-      armbianImageVariant: "metadata-cloud-k8s-1.32"
-      doGrowPart: false # Armbian does it itself when booted
-      doUserAndSshSetup: false # Armbian does it itself when booted
-      doFixResolvConf: false
-      doInjectHegelCloudInit: true
-      rootfsPartitionNumber: "1" # rootfs is the one and only
-
     "quartz64a-k8s":
       enabled: false
       arch: "aarch64"
