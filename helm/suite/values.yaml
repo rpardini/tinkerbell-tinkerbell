@@ -21,10 +21,13 @@ showcase:
 #### Tinkerbell (-ng) subChart.
 tinkerbell:
   enabled: true
-  hookos:
-    enabled: false # suite does its own nginx
-  kubevip:
-    enabled: false # suite does not use Smee at all, much less kubevip
+  optional:
+    hookos:
+      enabled: false # suite does its own nginx
+    migration:
+      enabled: false # no migration here
+    kubevip:
+      enabled: false # suite does not use Smee at all, much less kubevip
   deployment:
     daemonSet:
       enabled: true # if true, it becomes actually a DaemonSet, not Deployment
