@@ -38,9 +38,15 @@ tinkerbell:
         enableRufioController: false # do not deploy Rufio  (BMC controller)
         enableSecondstar: false # do not deploy Secondstar (Serial over SSH)
         enableSmee: false # Do not, I repeat, do NOT deploy Smee (DHCP/TFTP/Syslog/HTTP-for-IPXE)
+      tootles:
+        bindPort: 50061 # Tootles (Hegel) HTTP port; defaults to 7172 but I've grown fond of 50061
     init: # Not deploying Smee, so init not required
       enabled: false
   service:
     type: ClusterIP # we're already in hostNetwork mode
     #lbClass: "io.cilium/node" # Use Cilium's Node LB
 
+
+    ports:
+      httpTootles:
+        port: 50061 # Tootles (Hegel) HTTP port; defaults to 7172 but I've grown fond of 50061
