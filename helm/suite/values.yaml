@@ -1,6 +1,7 @@
 hookImageServer:
   enabled: true
   hostDirectory: "/opt/hook"
+  #nodeSelector: {}
 
 nodePort:
   hookImageServer:
