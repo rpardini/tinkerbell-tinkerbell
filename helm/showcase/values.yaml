@@ -24,18 +24,18 @@ forceNamespace: null # or a string to force all resources to be created in a spe
 # Generates download jobs and configs for easy show-off'ing of Tinkerbell on diverse hardware
 provision:
   # @TODO: many simultaneous download jobs can drive an SD-card/low-bandwidth cluster to its knees. Consider a single download job for all
-  
+
   common:
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
     hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20250414-0518/"
     hookDownloadId: "20250503-0518" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
 
-    armbianImageOwnerRepo: "armsurvivors/armbian-release"
-    armbianImageRevision: "25.05.03-938"
-    armbianImageRelease: "bookworm"
+    armbianImageOwnerRepo: "armsurvivors/armbian-release" # https://github.com/armsurvivors/armbian-release
+    armbianImageRevision: "25.09.03-1117"
+    armbianImageRelease: "trixie" # bookworm is oldstable already, move on
     armbianImageFormat: ".img" # raw=.img, qcow2=.img.qcow2
-    armbianImageVendor: "Armbian-armsurvivors_" # https://github.com/armsurvivors/armbian-release/releases/download/25.04.20-918/Armbian-armsurvivors_25.04.20-918_nanopct6-lts_bookworm_edge-metadata-cloud-k8s-1.32.img.xz
+    armbianImageVendor: "Armbian-armsurvivors_"
     armbianImageConversion: "xz-qcow2-to-img-gz"
 
   # Define one key per hook built to be downloaded and made available. Those _must_ match the hardware definitions.
@@ -208,7 +208,7 @@ hardware:
   devices: # One entry for each machine
 
     "quartz64a":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "quartz64a" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -219,7 +219,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/quartz64a_tinkerbell_l3
 
     "odroidhc4":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "odroidhc4" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
@@ -230,7 +230,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/odroidhc4_tinkerbell_l3
 
     "nanopct6lts":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "nanopct6lts" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -241,7 +241,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
 
     "blade3c":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "blade3c" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -253,7 +253,7 @@ hardware:
 
     # Raspberry Pi 4B (bcm2711)
     "rpi":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "rpi"
       rootDisk: "/dev/disk/by-id/ata-2105_naa.5000000000000001"
@@ -264,7 +264,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/rpi4b_tinkerbell_l3
 
     "vm-amd64":
-      enabled: true
+      enabled: false
       arch: x86_64
       mac: "vm-amd64"
       rootDisk: "/dev/nvme0n1"
@@ -277,7 +277,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
 
     "vm-arm64":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "vm-arm64"
       rootDisk: "/dev/nvme0n1"
