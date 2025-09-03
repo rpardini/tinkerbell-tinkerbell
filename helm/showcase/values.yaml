@@ -2,7 +2,7 @@
 tinkerbell:
   hostDirectory: "/opt/hook" # hostPath where Hook & images are downloaded & served from
   imagesURL: "http://192.168.66.170:32083" # # URL where images are served from
-  hegelURL: "http://192.168.66.170:50061" # Hegel URL
+  hegelURL: "http://192.168.66.170:50061" # tootles URL; usually 7172
 
 actions:
   repository: "quay.io/tinkerbellrpardini/actions" # rpardini's fork with some fixes for arm64
