@@ -67,6 +67,8 @@ metadata:
   name: "{{ $deviceId }}-hardware"
   {{- if $.Values.forceNamespace }}
   namespace: "{{ $.Values.forceNamespace }}"
+  {{- else if $mergedDevice.namespace }}
+  namespace: "{{ $mergedDevice.namespace }}"
   {{- end }}
   labels:
     "app.kubernetes.io/instance": "{{ $.Release.Name }}"
@@ -147,6 +149,8 @@ metadata:
   name: "{{ $deviceId }}-template"
   {{- if $.Values.forceNamespace }}
   namespace: "{{ $.Values.forceNamespace }}"
+  {{- else if $mergedDevice.namespace }}
+  namespace: "{{ $mergedDevice.namespace }}"
   {{- end }}
   labels:
     "app.kubernetes.io/instance": "{{ $.Release.Name }}"
@@ -277,7 +281,7 @@ spec:
                     strict_id: false
                 manage_etc_hosts: localhost
                 warnings:
-                  dsid_missing_source: off      
+                  dsid_missing_source: off
               DEST_DISK: {{$rootDiskRootfsPartitionDevice}}
               FS_TYPE: ext4
               UID: 0
@@ -405,6 +409,8 @@ metadata:
   name: "{{ $deviceId }}-workflow"
   {{- if $.Values.forceNamespace }}
   namespace: "{{ $.Values.forceNamespace }}"
+  {{- else if $mergedDevice.namespace }}
+  namespace: "{{ $mergedDevice.namespace }}"
   {{- end }}
   labels:
     "app.kubernetes.io/instance": "{{ $.Release.Name }}"
