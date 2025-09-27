@@ -305,6 +305,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
 
     "vm01":
+      #namespace: "trixie-capi-demo"
       enabled: true
       arch: x86_64
       mac: "52:54:00:01:03:01"
