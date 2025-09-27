@@ -16,7 +16,7 @@ showcase:
   jobs:
     enabled: true  # false to completely skip generating jobs
     hooks:
-      enabled: false # cos we are doing L3 provisioning, hooks are already in the bootable media
+      enabled: true # again true, as we can do l3 provisioning as long as we don't do DHCP # before: cos we are doing L3 provisioning, hooks are already in the bootable media
 
 
 #### Tinkerbell (-ng) subChart.
