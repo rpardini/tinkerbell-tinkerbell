@@ -285,6 +285,15 @@ jobs:
           # Auto-set showcase's values.yaml field tinkerbell.tinkWorkerImage to the right agent image with "colon version"
           yq eval -i ".tinkerbell.tinkWorkerImage = \"ghcr.io/${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || ( format('{0}/tinkerbell', github.repository_owner) ) }}/tink-agent:${VERSION}\"" helm/showcase/values.yaml
           
+          # In helm/showcase/values.yaml, set every instance of provision.hook.*.enabled to false
+          yq eval '.provision.hook[].enabled = false' -i helm/showcase/values.yaml
+          
+          # In helm/showcase/values.yaml, set every instance of provision.images.*.enabled to false
+          yq eval '.provision.images[].enabled = false' -i helm/showcase/values.yaml
+          
+          # In helm/showcase/values.yaml, set every instance of hardware.devices.*.enabled to false
+          yq eval '.hardware.devices[].enabled = false' -i helm/showcase/values.yaml
+          
           git diff || true
 
       - name: Package and publish all the Helm charts
