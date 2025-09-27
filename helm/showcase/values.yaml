@@ -221,7 +221,7 @@ hardware:
   devices: # One entry for each machine
 
     "quartz64a":
-      enabled: false
+      enabled: true
       arch: aarch64
       mac: "quartz64a" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -232,7 +232,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/quartz64a_tinkerbell_l3
 
     "odroidhc4":
-      enabled: false
+      enabled: true
       arch: aarch64
       mac: "odroidhc4" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
@@ -243,7 +243,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/odroidhc4_tinkerbell_l3
 
     "nanopct6lts":
-      enabled: false
+      enabled: true
       arch: aarch64
       mac: "nanopct6lts" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -305,7 +305,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
 
     "vm01":
-      enabled: false
+      enabled: true
       arch: x86_64
       mac: "52:54:00:01:03:01"
       netboot: true
