@@ -240,22 +240,22 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      # Go is needed to get the VERSION in the Makefile which is used in the Helm packaging
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "${{ env.GO_VERSION }}"
-          cache: false
+      ## rpardini disabled, not really needed ## # Go is needed to get the VERSION in the Makefile which is used in the Helm packaging
+      ## rpardini disabled, not really needed ## - name: Setup Go
+      ## rpardini disabled, not really needed ##   uses: actions/setup-go@v6
+      ## rpardini disabled, not really needed ##   with:
+      ## rpardini disabled, not really needed ##     go-version: "${{ env.GO_VERSION }}"
+      ## rpardini disabled, not really needed ##     cache: false
 
-      - name: Restore Go cache
-        uses: actions/cache/restore@v5
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          # always grab from the restore-keys pattern below,
-          # like Linux-go-$hash-YYYY-MM-DD as saved by CI
-          key: ${{ runner.os }}-go-${{ hashFiles('go.mod') }}
+      ## rpardini disabled, not really needed ##- name: Restore Go cache
+      ## rpardini disabled, not really needed ##  uses: actions/cache/restore@v5
+      ## rpardini disabled, not really needed ##  with:
+      ## rpardini disabled, not really needed ##    path: |
+      ## rpardini disabled, not really needed ##      ~/go/pkg/mod
+      ## rpardini disabled, not really needed ##      ~/.cache/go-build
+      ## rpardini disabled, not really needed ##    # always grab from the restore-keys pattern below,
+      ## rpardini disabled, not really needed ##    # like Linux-go-$hash-YYYY-MM-DD as saved by CI
+      ## rpardini disabled, not really needed ##    key: ${{ runner.os }}-go-${{ hashFiles('go.mod') }}
 
       - name: Login to ghcr.io
         uses: docker/login-action@v3
