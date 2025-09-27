@@ -2,6 +2,7 @@
 tinkerbell:
   hostDirectory: "/opt/hook" # hostPath where Hook & images are downloaded & served from
   imagesURL: "http://192.168.66.170:32083" # # URL where images are served from
+  hookURL: "http://192.168.66.170:32083" # # URL where hook vmlinuz/initrds are served from
   hegelURL: "http://192.168.66.170:50061" # tootles URL; usually 7172
 
   # For netbooting (TFTP only, no DHCP here)
@@ -21,7 +22,7 @@ actions:
   version: "latest"
 
 jobs:
-  enabled: false # false to completely skip generating jobs
+  enabled: true # false to completely skip generating jobs
   nodeSelector: null # or an object with keys and values for NodeSelector
   hooks:
     enabled: true # enable hook download jobs? (depends on jobs.enabled too)
@@ -40,11 +41,11 @@ provision:
   common:
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
-    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20250414-0518/"
-    hookDownloadId: "20250503-0518" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
+    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20250927-0516/"
+    hookDownloadId: "20250927-0516" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
 
     armbianImageOwnerRepo: "armsurvivors/armbian-release" # https://github.com/armsurvivors/armbian-release
-    armbianImageRevision: "25.09.03-1117"
+    armbianImageRevision: "25.09.27-1147"
     armbianImageRelease: "trixie" # bookworm is oldstable already, move on
     armbianImageFormat: ".img" # raw=.img, qcow2=.img.qcow2
     armbianImageVendor: "Armbian-armsurvivors_"
