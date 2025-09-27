@@ -37,7 +37,9 @@ tinkerbell:
       globals:
         enableRufioController: false # do not deploy Rufio  (BMC controller)
         enableSecondstar: false # do not deploy Secondstar (Serial over SSH)
-        enableSmee: false # Do not, I repeat, do NOT deploy Smee (DHCP/TFTP/Syslog/HTTP-for-IPXE)
+        enableSmee: true # Enable Smee, but notice how smee.dhcpEnabled is false
+      smee:
+        dhcpEnabled: false # DO NOT enable DHCP -- this l3-only -- we need Smee only for TFTP/HTTP serving
       tootles:
         bindPort: 50061 # Tootles (Hegel) HTTP port; defaults to 7172 but I've grown fond of 50061
     init: # Not deploying Smee, so init not required
