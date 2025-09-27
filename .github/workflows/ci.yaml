@@ -123,10 +123,10 @@ jobs:
           - name: tink-agent
             make-target: cross-compile-agent
             artifact-name: tink-agent-binaries
-          - name: tinkerbell-embedded-linux
-            make-target: checksums-embedded
-            artifact-name: tinkerbell-embedded-binaries
-            extra-paths: out/checksums-embedded.txt
+          #- name: tinkerbell-embedded-linux
+          #  make-target: checksums-embedded
+          #  artifact-name: tinkerbell-embedded-binaries
+          #  extra-paths: out/checksums-embedded.txt
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
