@@ -4,6 +4,18 @@ tinkerbell:
   imagesURL: "http://192.168.66.170:32083" # # URL where images are served from
   hegelURL: "http://192.168.66.170:50061" # tootles URL; usually 7172
 
+  # For netbooting (TFTP only, no DHCP here)
+  syslogHost: "192.168.66.170" # Syslog host, usually smee
+  grpcAuthority: "192.168.66.170:42113" # Tink's gRPC authority
+  grpcTLS: "false" # true/false (string): Whether to use TLS for gRPC
+  grpcInsecureTLS: "false" # true/false (string): Whether to use insecure TLS for gRPC (if using grpcTLS)
+  insecureRegistries: # hit insecure registries over HTTP
+    enabled: false # enable and set comma-sep list below
+    registries: "" # (string) comma-separated list of insecure registries (will be accessed over HTTP if listed here)
+  tinkWorkerImage: "ghcr.io/rpardini/tinkerbell/tink-agent:latest" # (string) Docker image to use for tink-worker, complete with tag
+  tinkWorkerImagePrefix: "" # prefix to add to tinkWorkerImage, for easy pass-through mirroring it
+
+
 actions:
   repository: "quay.io/tinkerbellrpardini/actions" # rpardini's fork with some fixes for arm64
   version: "latest"
@@ -286,6 +298,27 @@ hardware:
       extraKernelCommandLine: "console=ttyAMA0"
       ipv4:
         address: 192.168.66.10 # not true, its just the host running the VM
+      # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
+      # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
+
+    "vm01":
+      enabled: false
+      arch: x86_64
+      mac: "52:54:00:01:03:01"
+      netboot: true
+      uefi: true
+      ipv4:
+        address: 192.168.66.71
+        gateway: "192.168.66.1"
+        netmask: "255.255.255.0"
+        dns: [ "192.168.66.1" ]
+        time_servers: [ "192.168.66.1" ]
+      rootDisk: "/dev/smth-smth-NOT-YET" # prolly not yet...
+      hookRef: "default-hook-amd64"
+      imageRef: "amd64-k8s"
+      extraKernelCommandLine: "console=ttyS0"
       # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
       # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
       userData: |
