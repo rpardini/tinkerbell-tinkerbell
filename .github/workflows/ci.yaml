@@ -282,6 +282,9 @@ jobs:
           yq eval -i ".deployment.image = \"ghcr.io/${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || ( format('{0}/tinkerbell', github.repository_owner) ) }}/tinkerbell\"" helm/tinkerbell/values.yaml
           yq eval -i ".deployment.imageTag = \"${VERSION}\"" helm/tinkerbell/values.yaml
           
+          # Auto-set showcase's values.yaml field tinkerbell.tinkWorkerImage to the right agent image with "colon version"
+          yq eval -i ".tinkerbell.tinkWorkerImage = \"ghcr.io/${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || ( format('{0}/tinkerbell', github.repository_owner) ) }}/tink-agent:${VERSION}\"" helm/showcase/values.yaml
+          
           git diff || true
 
       - name: Package and publish all the Helm charts
