@@ -27,30 +27,13 @@
 {{- if ne $imageObj.arch $hookObj.arch }}{{- fail (printf "Device '%s' (imageRef '%s'): '%s'" $deviceId $mergedDevice.imageRef "image and hook arch mismatch") }}{{- end }}
 {{- if ne $dev.arch $imageObj.arch }}{{- fail (printf "Device '%s': '%s'" $deviceId "device and image arch mismatch") }}{{- end }}
 {{- if ne $dev.arch $hookObj.arch }}{{- fail (printf "Device '%s': '%s'" $deviceId "device and hook arch mismatch") }}{{- end }}
-{{- $rootDiskDevice := required (printf "Device '%s' - %s" $deviceId "rootDisk is required") $mergedDevice.rootDisk }}
-{{- if not (hasPrefix "/dev" $rootDiskDevice) }}{{- fail (printf "Device '%s' (rootDisk '%s'): '%s'" $deviceId $rootDiskDevice "rootDisk does not begin with /dev") }}{{- end }}
-{{- $rootDiskRootfsPartitionNumber := printf "%s" $imageObj.rootfsPartitionNumber }}
-  # rootDiskRootfsPartitionNumber is {{$rootDiskRootfsPartitionNumber}}
-{{- $rootDiskRootfsPartitionDevice := "unknown" }}
-{{- $espPartitionDevice := "unknown" }}
-{{- $espPartitionNumber := printf "%s" ($imageObj.espPartitionNumber | default 1 ) }}
 
-{{- if hasPrefix "/dev/disk/" $rootDiskDevice }}
-  # YES! {{$rootDiskDevice}} begins with /dev/disk
-{{- $rootDiskRootfsPartitionDevice = printf "%s-part%s" $rootDiskDevice $rootDiskRootfsPartitionNumber  }}
-{{- $espPartitionDevice = printf "%s-part%s" $rootDiskDevice $espPartitionNumber  }}
-{{- else }}
-  # NO! {{$rootDiskDevice}} does not begin with /dev/disk
-{{- if regexMatch "[0-9]$" $rootDiskDevice }}
-  # YES! {{$rootDiskDevice}} ends with a digit - REGEX MATCH
-{{- $rootDiskRootfsPartitionDevice = printf "%sp%s" $rootDiskDevice $rootDiskRootfsPartitionNumber  }}
-{{- $espPartitionDevice = printf "%sp%s" $rootDiskDevice $espPartitionNumber  }}
-{{- else }}
-  # NO! {{$rootDiskDevice}} does not end with a digit - REGEX NOT MATCH
-{{- $rootDiskRootfsPartitionDevice = printf "%s%s" $rootDiskDevice $rootDiskRootfsPartitionNumber  }}
-{{- $espPartitionDevice = printf "%s%s" $rootDiskDevice $espPartitionNumber  }}
-{{- end }}
-{{- end }}
+{{- $rootDiskDeviceNonTemplated := required (printf "Device '%s' - %s" $deviceId "rootDisk is required") $mergedDevice.rootDisk }}
+{{- $rootDiskRootfsPartitionNumber := printf "%s" $imageObj.rootfsPartitionNumber }}
+{{- $espPartitionNumber := printf "%s" ($imageObj.espPartitionNumber | default "1" ) }}
+{{- $rootDiskRootfsPartitionDevice := printf "{{ formatPartition %s %s }}" "(index .Hardware.Disks 0)" $rootDiskRootfsPartitionNumber }}
+{{- $espPartitionDevice := printf "{{ formatPartition %s %s }}" "(index .Hardware.Disks 0)" $espPartitionNumber }}
+{{- $rootDiskDevice := "{{ index .Hardware.Disks 0 }}" }}
   # Thus at the end of the day, $rootDiskRootfsPartitionDevice is {{$rootDiskRootfsPartitionDevice}} and ESP is {{$espPartitionDevice}}
 
 {{- $imageObj = merge $imageObj $common }}
@@ -78,7 +61,7 @@ metadata:
     "tinkerbell.showcase/hookRef": "{{ $mergedDevice.hookRef }}"
 spec:
   disks:
-    - device: "{{ $rootDiskDevice }}"
+    - device: "{{ $rootDiskDeviceNonTemplated }}"
   userData: |
     {{- $mergedDevice.userData | default "#!/bin/bash\necho 'tinkerbell-showcase: userData not configured for device' >&2;" | nindent 4 }}
   metadata:
@@ -132,7 +115,7 @@ spec:
           contents: |
             echo Showcase starting for {{$deviceId}} with hook {{$mergedDevice.hookRef}} and image {{$mergedDevice.imageRef}}...
             set download-url {{ $.Values.tinkerbell.hookURL }}
-            set kernel-params tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{$dev.mac}} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} modules=loop,squashfs,sd-mod,usb-storage initrd={{ $hookObj.initrd }} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
+            set kernel-params tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{ `{{.device_1}}` }} hw_addr={{ `{{.device_1}}` }} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} modules=loop,squashfs,sd-mod,usb-storage initrd={{ $hookObj.initrd }} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
             echo Kernel image: ${download-url}/{{ $hookObj.kernel }}
             echo Kernel initrd: ${download-url}/{{ $hookObj.initrd }}
             echo Kernel cmdline: ${kernel-params}
@@ -161,15 +144,15 @@ spec:
     name: "{{ $deviceId }}-template"
     global_timeout: 1800
     tasks:
-      - name: "os-installation-{{ $deviceId }}"
-        worker: "{{ $dev.mac }}"
+      - name: "os-installation"
+        worker: "{{ `{{.device_1}}` }}"
         volumes:
           - /dev:/dev
           - /dev/console:/dev/console
           - /lib/firmware:/lib/firmware:ro
 
         actions:
-          - name: "stream-image-{{ $deviceId }}"
+          - name: "stream-image"
             image: {{ $.Values.actions.repository }}/image2disk:{{ $.Values.actions.version }}
             timeout: 600
             environment:
@@ -184,7 +167,7 @@ spec:
               {{- end }}
 
           {{- if $imageObj.doGrowPart }}
-          - name: "grow-partition-{{ $deviceId }}"
+          - name: "grow-partition"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -196,7 +179,7 @@ spec:
           {{- end }}
 
           {{- if ($imageObj.doFixResolvConf)  }}
-          - name: "fix-resolv-{{ $deviceId }}"
+          - name: "fix-resolv"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -209,7 +192,7 @@ spec:
 
 
           {{- if $imageObj.doUserAndSshSetup }}
-          - name: "install-packages-{{ $deviceId }}"
+          - name: "install-packages"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 180 # 3 minutes
             environment:
@@ -218,7 +201,7 @@ spec:
               CHROOT: y
               DEFAULT_INTERPRETER: "/bin/sh -c"
               CMD_LINE: "apt -y update && DEBIAN_FRONTEND=noninteractive apt -y install openssl neofetch --no-install-recommends --no-install-suggests"
-          - name: "create-user-{{ $deviceId }}"
+          - name: "create-user"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -227,7 +210,7 @@ spec:
               CHROOT: y
               DEFAULT_INTERPRETER: "/bin/sh -c"
               CMD_LINE: "useradd -p $(openssl passwd -1 tink) -s /bin/bash -d /home/tink/ -m -G sudo tink"
-          - name: "enable-ssh-{{ $deviceId }}"
+          - name: "enable-ssh"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -236,7 +219,7 @@ spec:
               CHROOT: y
               DEFAULT_INTERPRETER: "/bin/sh -c"
               CMD_LINE: "ssh-keygen -A; systemctl enable ssh.service; echo 'PasswordAuthentication yes' > /etc/ssh/sshd_config.d/60-cloudimg-settings.conf"
-          - name: "disable-apparmor-{{ $deviceId }}"
+          - name: "disable-apparmor"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -245,7 +228,7 @@ spec:
               CHROOT: y
               DEFAULT_INTERPRETER: "/bin/sh -c"
               CMD_LINE: "systemctl disable apparmor; systemctl disable snapd"
-          - name: "write-netplan-{{ $deviceId }}"
+          - name: "write-netplan"
             image: {{ $.Values.actions.repository }}/writefile:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -269,7 +252,7 @@ spec:
 
           {{- if ($imageObj.doInjectHegelCloudInit )  }}
           # Based on https://tinkerbell.org/docs/integrations/cloudinit/#setup-cloud-init-to-use-hegel
-          - name: "inject-cloud-init-hegel-cfg-{{ $deviceId }}"
+          - name: "inject-cloud-init-hegel-cfg"
             image: {{ $.Values.actions.repository }}/writefile:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -277,7 +260,7 @@ spec:
               CONTENTS: |
                 datasource:
                   Ec2:
-                    metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}/tootles/instanceID/{{ $dev.mac }}"]
+                    metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}/tootles/instanceID/{{ `{{.device_1}}` }}"]
                     strict_id: false
                 manage_etc_hosts: localhost
                 warnings:
@@ -289,7 +272,7 @@ spec:
               MODE: 0600
               DIRMODE: 0700
 
-          - name: "inject-cloud-init-hegel-ds-{{ $deviceId }}"
+          - name: "inject-cloud-init-hegel-ds"
             image: {{ $.Values.actions.repository }}/writefile:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -305,7 +288,7 @@ spec:
           {{- end }}
 
           {{- if ($imageObj.doFixResolvConf )  }}
-          - name: "revert-fix-resolv-{{ $deviceId }}"
+          - name: "revert-fix-resolv"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -317,7 +300,7 @@ spec:
           {{- end }}
 
           {{- if ($imageObj.doAddEFIBootEntry )  }}
-          - name: "add-efi-boot-entry-{{ $deviceId }}"
+          - name: "add-efi-boot-entry"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -329,7 +312,7 @@ spec:
           {{- end }}
 
           {{- if ($imageObj.doRestoreGRUBNormalcy )  }}
-          - name: "restore-grub-normalcy-{{ $deviceId }}"
+          - name: "restore-grub-normalcy"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -341,7 +324,7 @@ spec:
           {{- end }}
 
           {{- if ($imageObj.doRestoreGRUBNormalcySeparateESP )  }}
-          - name: "restore-grub-normalcy-{{ $deviceId }}"
+          - name: "restore-grub-normalcy-esp"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
             environment:
@@ -376,7 +359,7 @@ spec:
           {{- end }}
 
           {{- if eq $hookObj.bootMode "kexec" }}
-          - name: "kexec-{{ $deviceId }}"
+          - name: "kexec"
             image: {{ $.Values.actions.repository }}/waitdaemon:{{ $.Values.actions.version }}
             timeout: 90
             pid: host
@@ -390,7 +373,7 @@ spec:
           {{- end }}
 
           {{- if eq $hookObj.bootMode "reboot" }}
-          - name: "reboot-{{ $deviceId }}"
+          - name: "reboot"
             image: {{ $.Values.actions.repository }}/waitdaemon:{{ $.Values.actions.version }}
             timeout: 90
             pid: host
