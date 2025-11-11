@@ -236,7 +236,7 @@ hardware:
       arch: aarch64
       mac: "odroidhc4" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge"
+      hookRef: "armbian-meson64-edge"
       imageRef: "odroidhc4-k8s"
       extraKernelCommandLine: "console=ttyAML0,115200"
       userData: |
