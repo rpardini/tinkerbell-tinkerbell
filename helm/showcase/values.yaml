@@ -41,11 +41,11 @@ provision:
   common:
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
-    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20250927-0516/"
-    hookDownloadId: "20250927-0516" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
+    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20251111-0519/"
+    hookDownloadId: "20251111-0519" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
 
     armbianImageOwnerRepo: "armsurvivors/armbian-release" # https://github.com/armsurvivors/armbian-release
-    armbianImageRevision: "25.09.27-1147"
+    armbianImageRevision: "25.11.08-1227"
     armbianImageRelease: "trixie" # bookworm is oldstable already, move on
     armbianImageFormat: ".img" # raw=.img, qcow2=.img.qcow2
     armbianImageVendor: "Armbian-armsurvivors_"
@@ -118,7 +118,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "nanopct6-lts"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -131,7 +131,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "mixtile-blade3"
       armbianImageBranch: "vendor"
-      armbianImageVariant: "metadata-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -143,7 +143,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "quartz64a"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -156,7 +156,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "odroidhc4"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -169,7 +169,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "rpi4b"
       armbianImageBranch: "current"
-      armbianImageVariant: "metadata-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -181,7 +181,7 @@ provision:
       arch: "x86_64"
       armbianImageBoard: "uefi-x86"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
       armbianImageFormat: ".img.qcow2"
       armbianImageConversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
@@ -197,7 +197,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "uefi-arm64"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
       armbianImageFormat: ".img.qcow2"
       armbianImageConversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
