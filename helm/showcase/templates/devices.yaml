@@ -123,6 +123,11 @@ spec:
             initrd ${download-url}/{{ $hookObj.initrd }}
             imgstat
             boot
+        {{- if and $dev.pxelinux $dev.pxelinux.template }}
+        pxelinux:
+          template: |
+            {{- $dev.pxelinux.template | nindent 12 }}
+        {{- end }}
       {{- end }}
   {{- end }}
 ---
