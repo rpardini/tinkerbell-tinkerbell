@@ -123,10 +123,32 @@ spec:
             initrd ${download-url}/{{ $hookObj.initrd }}
             imgstat
             boot
-        {{- if and $dev.pxelinux $dev.pxelinux.template }}
+        {{- if and $dev.pxelinux }}
         pxelinux:
+          {{- if $dev.pxelinux.template }}
           template: |
             {{- $dev.pxelinux.template | nindent 12 }}
+          {{- else }}
+          {{- $fullFdt := "" }}
+          {{- $hasFdt := false }}
+          {{- if and $hookObj.dtbDir $dev.pxelinux.fdt }}
+          {{- $hasFdt = true }}
+          {{- $fullFdt = printf "%s/%s" $hookObj.dtbDir $dev.pxelinux.fdt }}
+          {{- end }}
+          template: |
+            default hook
+            menu title Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} via PXELinux
+            prompt 1
+            timeout 300
+            label hook
+              menu label Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} {{if $hasFdt }}and FDT {{$dev.pxelinux.fdt}}{{else}}SANS FDT{{end}}
+              initrd {{ $hookObj.initrd }}
+              linux {{ $hookObj.kernel }}
+              append tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{$dev.mac}} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
+              {{- if $hasFdt }}
+              fdt {{ $fullFdt }}
+              {{- end }}
+          {{- end }}
         {{- end }}
       {{- end }}
   {{- end }}
