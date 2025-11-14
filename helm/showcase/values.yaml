@@ -61,6 +61,7 @@ provision:
       downloadFile: "hook_armbian-rockchip64-edge.tar.gz"
       kernel: "vmlinuz-armbian-rockchip64-edge"
       initrd: "initramfs-armbian-rockchip64-edge"
+      dtbDir: "dtbs-armbian-rockchip64-edge"
       kernelCommandLine: ""
       bootMode: reboot
 
@@ -70,6 +71,7 @@ provision:
       downloadFile: "hook_armbian-rk35xx-vendor.tar.gz"
       kernel: "vmlinuz-armbian-rk35xx-vendor"
       initrd: "initramfs-armbian-rk35xx-vendor"
+      dtbDir: "dtbs-armbian-rk35xx-vendor"
       kernelCommandLine: "" # acpi=off efi=noruntime splash=verbose
       bootMode: reboot
 
@@ -79,6 +81,7 @@ provision:
       downloadFile: "hook_armbian-bcm2711-current.tar.gz"
       kernel: "vmlinuz-armbian-bcm2711-current"
       initrd: "initramfs-armbian-bcm2711-current"
+      # TODO: dtbDir? Is it even needed? DTB is already loaded by the time u-boot gets there?
       kernelCommandLine: ""
       bootMode: reboot
 
@@ -88,6 +91,7 @@ provision:
       downloadFile: "hook_armbian-meson64-edge.tar.gz"
       kernel: "vmlinuz-armbian-meson64-edge"
       initrd: "initramfs-armbian-meson64-edge"
+      dtbDir: "dtbs-armbian-meson64-edge"
       kernelCommandLine: "acpi=off efi=noruntime"
       bootMode: reboot
 
@@ -106,6 +110,7 @@ provision:
       downloadFile: "hook_aarch64.tar.gz"
       kernel: "vmlinuz-aarch64"
       initrd: "initramfs-aarch64"
+      dtbDir: "dtbs-aarch64"
       kernelCommandLine: ""
       bootMode: reboot # kexec is no-go here, kernel problem? (persists after enabling CONFIG_KEXEC & trying to fix TB action)
 
