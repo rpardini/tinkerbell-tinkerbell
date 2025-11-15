@@ -123,7 +123,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "nanopct6-lts"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -136,7 +136,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "cm3588-nas"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -149,7 +149,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "mixtile-blade3"
       armbianImageBranch: "vendor"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -161,7 +161,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "quartz64a"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -174,7 +174,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "odroidhc4"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -187,7 +187,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "khadas-vim3l"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -200,7 +200,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "rpi4b"
       armbianImageBranch: "current"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -212,7 +212,7 @@ provision:
       arch: "x86_64"
       armbianImageBoard: "uefi-x86"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       armbianImageFormat: ".img.qcow2"
       armbianImageConversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
@@ -228,7 +228,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "uefi-arm64"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       armbianImageFormat: ".img.qcow2"
       armbianImageConversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
