@@ -169,6 +169,19 @@ provision:
       rootfsPartitionNumber: "1" # rootfs is the one and only
       # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
 
+    "khadasvim3l-k8s":
+      enabled: false
+      arch: "aarch64"
+      armbianImageBoard: "khadas-vim3l"
+      armbianImageBranch: "edge"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      doGrowPart: false # Armbian does it itself when booted
+      doUserAndSshSetup: false # Armbian does it itself when booted
+      doFixResolvConf: false
+      doInjectHegelCloudInit: true
+      rootfsPartitionNumber: "1" # rootfs is the one and only
+      # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
+
     "rpi4b-k8s":
       enabled: false
       arch: "aarch64"
@@ -246,6 +259,22 @@ hardware:
       extraKernelCommandLine: "console=ttyAML0,115200"
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/odroidhc4_tinkerbell_l3
+
+    "khadasvim3l":
+      enabled: true
+      arch: aarch64
+      mac: "khadasvim3l" # not really a MAC, instead an ID
+      rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
+      hookRef: "armbian-meson64-edge"
+      imageRef: "khadasvim3l-k8s"
+      extraKernelCommandLine: "console=ttyAML0,115200"
+      netboot: true
+      ipv4:
+        address: 66.66.66.66
+      pxelinux:
+        fdt: "amlogic/meson-sm1-khadas-vim3l.dtb"
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/khadasvim3l_tinkerbell_l3
 
     "nanopct6lts":
       enabled: true
