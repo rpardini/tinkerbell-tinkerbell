@@ -131,6 +131,19 @@ provision:
       rootfsPartitionNumber: "1" # rootfs is the one and only
       # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
 
+    "cm3588-nas-k8s":
+      enabled: false
+      arch: "aarch64"
+      armbianImageBoard: "cm3588-nas"
+      armbianImageBranch: "edge"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.32"
+      doGrowPart: false # Armbian does it itself when booted
+      doUserAndSshSetup: false # Armbian does it itself when booted
+      doFixResolvConf: false
+      doInjectHegelCloudInit: true
+      rootfsPartitionNumber: "1" # rootfs is the one and only
+      # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
+
     "blade3-k8s":
       enabled: false
       arch: "aarch64"
@@ -286,6 +299,22 @@ hardware:
       extraKernelCommandLine: "console=ttyS2,1500000"
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
+
+    "cm3588-nas":
+      enabled: true
+      arch: aarch64
+      mac: "cm3588nas" # not really a MAC, instead an ID
+      rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
+      hookRef: "armbian-rockchip64-edge"
+      imageRef: "cm3588-nas-k8s"
+      extraKernelCommandLine: "console=ttyS2,1500000"
+      netboot: true
+      ipv4:
+        address: 66.66.66.66
+      pxelinux:
+        fdt: "rockchip/rockchip/rk3588-friendlyelec-cm3588-nas-40pin-pwm-fan.dtb" # custom DTB from rpardini's fork
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/cm3588_tinkerbell_l3
 
     "blade3c":
       enabled: false
