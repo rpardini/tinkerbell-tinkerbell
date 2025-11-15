@@ -270,6 +270,11 @@ hardware:
       hookRef: "armbian-meson64-edge"
       imageRef: "odroidhc4-k8s"
       extraKernelCommandLine: "console=ttyAML0,115200"
+      netboot: true
+      ipv4:
+        address: 66.66.66.66
+      pxelinux:
+        fdt: "amlogic/meson-sm1-odroid-hc4.dtb"
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/odroidhc4_tinkerbell_l3
 
@@ -297,6 +302,11 @@ hardware:
       hookRef: "armbian-rockchip64-edge"
       imageRef: "nanopct6lts-k8s"
       extraKernelCommandLine: "console=ttyS2,1500000"
+      netboot: true
+      ipv4:
+        address: 66.66.66.66
+      pxelinux:
+        fdt: "rockchip/rk3588-nanopc-t6-lts.dtb"
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
 
