@@ -8,7 +8,8 @@
   # downloadId: {{ $hook.hookDownloadId }}
   # downloadFile: {{ $hook.downloadFile }}
   # hookDownloadBaseUrl: {{ $hook.hookDownloadBaseUrl }}
-{{- $hash := trunc 8 (sha1sum (printf "%s-%s-%s" $hook.hookDownloadId $hook.hookDownloadBaseUrl $hook.downloadFile)) }}
+  # dtbDir: {{ $hook.dtbDir }}
+{{- $hash := trunc 8 (sha1sum (printf "%s-%s-%s-%s" $hook.hookDownloadId $hook.hookDownloadBaseUrl $hook.downloadFile $hook.dtbDir)) }}
 # Loop over $.Values.hardware.devices (a dictionary) and for each value, check if it's hookRef matches this $hookId - if so, enable this hook.
 {{- $enabledByDeviceUsage := false }}
 {{- range $device := $.Values.hardware.devices }}
@@ -43,9 +44,7 @@ data:
     	exit 0
     fi
 
-    {{
-    if $hook.skipDownload 
-    }}
+    {{ if $hook.skipDownload  }}
     echo "Skipping download for hook {{$hookId}}."
     ls -lah "/output/{{$hook.kernel}}"
     ls -lah "/output/{{$hook.initrd}}"
@@ -60,11 +59,16 @@ data:
     mkdir -p "/output/download_hook_{{$hookId}}/extract"
     cd "/output/download_hook_{{$hookId}}/extract"
     tar -xvzf "${down_file}"
+    {{ if $hook.dtbDir }}
+    tar xzvf "{{$hook.dtbDir}}.tar.gz"
+    rm -rf "/output/{{ $hook.dtbDir }}" # remove any old dtbDir content
+    {{ end }}
     mv -v "/output/download_hook_{{$hookId}}/extract/"* /output/
     rm -rf "/output/download_hook_{{$hookId}}"
     ls -lah "/output/{{$hook.kernel}}"
     ls -lah "/output/{{$hook.initrd}}"
-    touch "/output/download_hook_{{$hookId}}_{{$hash}}.done"    {{ end }}
+    touch "/output/download_hook_{{$hookId}}_{{$hash}}.done"
+    {{ end }}
 
 ---
 apiVersion: batch/v1
