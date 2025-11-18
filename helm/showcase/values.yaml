@@ -81,7 +81,7 @@ provision:
       downloadFile: "hook_armbian-bcm2711-current.tar.gz"
       kernel: "vmlinuz-armbian-bcm2711-current"
       initrd: "initramfs-armbian-bcm2711-current"
-      # TODO: dtbDir? Is it even needed? DTB is already loaded by the time u-boot gets there?
+      dtbDir: "dtbs-armbian-bcm2711-current"
       kernelCommandLine: ""
       bootMode: reboot
 
