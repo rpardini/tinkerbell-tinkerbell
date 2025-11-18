@@ -70,7 +70,8 @@ spec:
       plan_slug: "{{$deviceId}}"
     instance:
       hostname: "{{ $deviceId }}"
-      id: "{{ $dev.mac }}"
+      #id: "{{ $dev.mac }}" # previously metadata id was MAC address; now instead use deviceId (overridable by metadataInstanceId)
+      id: "{{ $dev.metadataInstanceId | default $deviceId }}"
       tags:
         - "tinkerbell-showcase"
       operating_system:
@@ -123,7 +124,7 @@ spec:
             initrd ${download-url}/{{ $hookObj.initrd }}
             imgstat
             boot
-        {{- if and $dev.pxelinux }}
+        {{- if $dev.pxelinux }}
         pxelinux:
           {{- if $dev.pxelinux.template }}
           template: |
@@ -287,7 +288,7 @@ spec:
               CONTENTS: |
                 datasource:
                   Ec2:
-                    metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}/tootles/instanceID/{{ `{{.device_1}}` }}"]
+                    metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}/tootles/instanceID/{{ `{{ .Hardware.Metadata.Instance.ID }}` }}"]
                     strict_id: false
                 manage_etc_hosts: localhost
                 warnings:
