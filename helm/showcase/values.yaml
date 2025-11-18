@@ -131,6 +131,19 @@ provision:
       rootfsPartitionNumber: "1" # rootfs is the one and only
       # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
 
+    "rock5b-k8s":
+      enabled: false
+      arch: "aarch64"
+      armbianImageBoard: "rock-5b"
+      armbianImageBranch: "edge"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      doGrowPart: false # Armbian does it itself when booted
+      doUserAndSshSetup: false # Armbian does it itself when booted
+      doFixResolvConf: false
+      doInjectHegelCloudInit: true
+      rootfsPartitionNumber: "1" # rootfs is the one and only
+      # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
+
     "cm3588-nas-k8s":
       enabled: false
       arch: "aarch64"
@@ -307,6 +320,22 @@ hardware:
         address: 66.66.66.66
       pxelinux:
         fdt: "rockchip/rk3588-nanopc-t6-lts.dtb"
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
+
+    "rock5b":
+      enabled: true
+      arch: aarch64
+      mac: "rock5b" # not really a MAC, instead an ID
+      rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
+      hookRef: "armbian-rockchip64-edge"
+      imageRef: "rock5b-k8s"
+      extraKernelCommandLine: "console=ttyS2,1500000"
+      netboot: true
+      ipv4:
+        address: 66.66.66.66
+      pxelinux:
+        fdt: "rockchip/rk3588-rock-5b.dtb"
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
 
