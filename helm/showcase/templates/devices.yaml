@@ -139,7 +139,7 @@ spec:
             default hook
             menu title Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} via PXELinux
             prompt 1
-            timeout 300
+            timeout {{$mergedDevice.pxelinux.menuTimeout | default 50 }}
             label hook
               menu label Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} {{if $hasFdt }}and FDT {{$dev.pxelinux.fdt}}{{else}}SANS FDT{{end}}
               initrd {{ $hookObj.initrd }}
