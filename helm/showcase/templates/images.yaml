@@ -73,7 +73,7 @@ data:
       echo "Image file $file does not exist. Downloading...."
       wget "$image_url" -O "${file}.tmp"
       mv -v "${file}.tmp" "$file"
-      echo "Done downloading image."  
+      echo "Done downloading image."
     else
       echo "Image file $file already exists. Skipping download."
     fi
@@ -87,8 +87,8 @@ data:
       echo "Image file $file does not exist. Downloading...."
       apk add --update pigz pixz
       wget "$image_url" -O "${file}.tmp.xz"
-      echo "Done downloading image. Converting from xz to gz..."  
-      pixz -d < "${file}.tmp.xz" | pigz > "${file}.tmp"  
+      echo "Done downloading image. Converting from xz to gz..."
+      pixz -d < "${file}.tmp.xz" | pigz > "${file}.tmp"
       mv -v "${file}.tmp" "$file"
       echo "Done converting image."
       rm -f "${file}.tmp.xz"
@@ -105,7 +105,7 @@ data:
       echo "Image file $file does not exist. Downloading...."
       apk add --update pigz pixz qemu-img
       wget "$image_url" -O "${file}.tmp.xz"
-      echo "Done downloading image. Decompressing xz..."  
+      echo "Done downloading image. Decompressing xz..."
       pixz -d < "${file}.tmp.xz" > "${file}.tmp.unxz"
       rm -v "${file}.tmp.xz"
       echo "Done decompressing xz, converting qcow2 to img..."
@@ -128,7 +128,7 @@ data:
       echo "Image file $file does not exist. Downloading...."
       apk add --update pigz pixz qemu-img
       wget "$image_url" -O "${file}.tmp.xz"
-      echo "Done downloading image. Decompressing xz..."  
+      echo "Done downloading image. Decompressing xz..."
       pixz -d < "${file}.tmp.xz" > "${file}.tmp.unxz"
       rm -v "${file}.tmp.xz"
       echo "Done decompressing xz, converting qcow2 to img..."
@@ -150,7 +150,7 @@ data:
       echo "Download-only Image file $file does not exist. Downloading...."
       wget "$image_url" -O "${file}.tmp"
       echo "Done downloading image. Moving..."
-      mv -v "${file}.tmp" "$file"  
+      mv -v "${file}.tmp" "$file"
       echo "Done moving image."
       rm -f "${file}.tmp.xz"
     else
@@ -170,7 +170,7 @@ data:
       echo "No-conversion image file $file already exists. Ready to use."
     fi
     {{- end }}
-    
+
 ---
 apiVersion: batch/v1
 kind: Job
@@ -183,6 +183,7 @@ metadata:
     "app.kubernetes.io/instance": "{{ $.Release.Name }}"
     "app.kubernetes.io/part-of": "tinkerbell-showcase"
 spec:
+  backoffLimit: 2
   template:
     metadata:
       labels:
