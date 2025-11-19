@@ -352,6 +352,7 @@ spec:
           {{- end }}
 
           {{- if ($imageObj.doRestoreGRUBNormalcySeparateESP )  }}
+          # @TODO: what this does is "rebuild-initramfs", "reinstall-grub-to-esp+nvram(efivars)-via-grub-install", "update-grub-with-new-cmdline"
           - name: "restore-grub-normalcy-esp"
             image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
             timeout: 90
@@ -373,7 +374,13 @@ spec:
                 rm -rfv /boot/efi/ubuntu /boot/efi/loader /boot/efi/EFI
                 mkdir -pv /boot/efi/EFI
                 update-initramfs -k all -c
-                echo 'GRUB_CMDLINE_LINUX_DEFAULT="${GRUB_CMDLINE_LINUX_DEFAULT} {{$mergedDevice.extraKernelCommandLine}}" # Added "{{$mergedDevice.extraKernelCommandLine}}" by tinkerbell action' > /etc/default/grub.d/99-provisioned.cfg
+
+                {{- if ($mergedDevice.overrideGrubCommandLine )  }}
+                echo 'GRUB_CMDLINE_LINUX_DEFAULT="{{$mergedDevice.overrideGrubCommandLine}}" # via overrideGrubCommandLine tinkerbell-showcase template' > /etc/default/grub.d/99-provisioned.cfg
+                {{- else }}
+                echo 'GRUB_CMDLINE_LINUX_DEFAULT="${GRUB_CMDLINE_LINUX_DEFAULT} {{$mergedDevice.extraKernelCommandLine}}" # via extraKernelCommandLine tinkerbell-showcase template' > /etc/default/grub.d/99-provisioned.cfg
+                {{- end }}
+
                 ls -lat /etc/default/grub.d
                 cat /etc/default/grub.d/99-provisioned.cfg
                 grub-install --efi-directory /boot/efi '--bootloader-id={{$mergedDevice.imageRef}}'
