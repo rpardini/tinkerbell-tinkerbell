@@ -427,3 +427,24 @@ hardware:
       # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
+
+      "nullpointer": # an old x86 with ASUS UEFI from 2018
+        #namespace: "trixie-capi-demo"
+        enabled: true
+        arch: x86_64
+        mac: "2c:4d:54:d3:be:57"
+        metadataInstanceId: "2c:4d:54:d3:be:57" # defaults to device-id (the key in the parent dict)
+        netboot: true
+        uefi: true
+        ipv4:
+          address: 192.168.66.60
+          netmask: 255.255.255.0
+        rootDisk: "/dev/disk/by-id/nvme-WD_Blue_SN570_1TB_2147BV449609"
+        hookRef: "default-hook-amd64"
+        imageRef: "amd64-k8s"
+        extraKernelCommandLine: "console=tty1" # No serial console. usb-tty-dupont-tty-usb hack one day
+        overrideGrubCommandLine: "console=tty1" # No serial console in the target image's grub; override grub.d with a 99-
+        # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
+        # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
+        userData: |
+          #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/arm2025_nullpointer
