@@ -39,6 +39,8 @@ provision:
   # @TODO: many simultaneous download jobs can drive an SD-card/low-bandwidth cluster to its knees. Consider a single download job for all
 
   common:
+    skipCloudInit: false # true = do not ever set Hardware's userData field; useful for CAPT
+
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
     hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20251125-0519/"
