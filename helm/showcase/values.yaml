@@ -41,8 +41,8 @@ provision:
   common:
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
-    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20251120-1547/"
-    hookDownloadId: "20251120-1547" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
+    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20251125-0519/"
+    hookDownloadId: "20251125-0519" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
 
     armbianImageOwnerRepo: "armsurvivors/armbian-release" # https://github.com/armsurvivors/armbian-release
     armbianImageRevision: "25.11.18-1255"
