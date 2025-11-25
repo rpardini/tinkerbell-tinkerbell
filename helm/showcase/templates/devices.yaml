@@ -59,6 +59,9 @@ metadata:
     "tinkerbell.showcase/deviceId": "{{ $deviceId }}"
     "tinkerbell.showcase/imageRef": "{{ $mergedDevice.imageRef }}"
     "tinkerbell.showcase/hookRef": "{{ $mergedDevice.hookRef }}"
+  annotations:
+    # for CAPT; points to the Template to use for provisioning this Hardware via CAPT
+    "hardware.tinkerbell.org/capt-template-override": "{{ $deviceId }}-template"
 spec:
   disks:
     - device: "{{ $rootDiskDeviceNonTemplated }}"
