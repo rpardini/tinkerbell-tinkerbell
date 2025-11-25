@@ -6,24 +6,24 @@
 # Device enabled: {{$deviceId}}
 {{- $common := $.Values.hardware.common }}
 {{- $mergedDevice := merge $dev $common }}
-  # Getting hook from hookRef: '{{$mergedDevice.hookRef}}'
+# Getting hook from hookRef: '{{$mergedDevice.hookRef}}'
 {{- if not $mergedDevice.hookRef }}{{- fail (printf "Device '%s', hookRef '%s': %s" $deviceId $mergedDevice.hookRef "hookRef unset?") }}{{- end }}
 
 {{- $hookObj := index $.Values.provision.hook $mergedDevice.hookRef }}
 {{- if not $hookObj }}{{- fail (printf "Device '%s', hookRef '%s': %s" $deviceId $mergedDevice.hookRef "hookRef not found") }}{{- end }}
-  # if the device has a hookOverride property, merge it on top of the hookObj; pre-merge: {{$hookObj.bootMode}}
+# if the device has a hookOverride property, merge it on top of the hookObj; pre-merge: {{$hookObj.bootMode}}
 {{ if $mergedDevice.hookOverride }}
-  # YES!!!!!!!!!! has hookOverride {{$deviceId}}
+# YES!!!!!!!!!! has hookOverride {{$deviceId}}
 {{ $hookObj = merge $mergedDevice.hookOverride $hookObj }}
 {{ else }}
-  # NO!!!!!!!!!! no hookOverride {{$deviceId}}
+# NO!!!!!!!!!! no hookOverride {{$deviceId}}
 {{ end }}
-  # Reboot mode after merge: {{$hookObj.bootMode}}
+# Reboot mode after merge: {{$hookObj.bootMode}}
 
 {{- $imageObj := index $.Values.provision.images $mergedDevice.imageRef }}
 {{- if not $imageObj }}{{- (printf "Device '%s', imageRef '%s': %s" $deviceId $mergedDevice.imageRef "imageRef not found") }}{{- end }}
-  # Check sanity of arch across device / image / hook - they all must match
-  # Device arch: {{$dev.arch}} Image arch: {{$imageObj.arch}} Hook arch: {{$hookObj.arch}}
+# Check sanity of arch across device / image / hook - they all must match
+# Device arch: {{$dev.arch}} Image arch: {{$imageObj.arch}} Hook arch: {{$hookObj.arch}}
 {{- if ne $imageObj.arch $hookObj.arch }}{{- fail (printf "Device '%s' (imageRef '%s'): '%s'" $deviceId $mergedDevice.imageRef "image and hook arch mismatch") }}{{- end }}
 {{- if ne $dev.arch $imageObj.arch }}{{- fail (printf "Device '%s': '%s'" $deviceId "device and image arch mismatch") }}{{- end }}
 {{- if ne $dev.arch $hookObj.arch }}{{- fail (printf "Device '%s': '%s'" $deviceId "device and hook arch mismatch") }}{{- end }}
@@ -34,7 +34,7 @@
 {{- $rootDiskRootfsPartitionDevice := printf "{{ formatPartition %s %s }}" "(index .Hardware.Disks 0)" $rootDiskRootfsPartitionNumber }}
 {{- $espPartitionDevice := printf "{{ formatPartition %s %s }}" "(index .Hardware.Disks 0)" $espPartitionNumber }}
 {{- $rootDiskDevice := "{{ index .Hardware.Disks 0 }}" }}
-  # Thus at the end of the day, $rootDiskRootfsPartitionDevice is {{$rootDiskRootfsPartitionDevice}} and ESP is {{$espPartitionDevice}}
+# Thus at the end of the day, $rootDiskRootfsPartitionDevice is {{$rootDiskRootfsPartitionDevice}} and ESP is {{$espPartitionDevice}}
 
 {{- $imageObj = merge $imageObj $common }}
 {{- if or (not $imageObj.downloadURL) (not $imageObj.image) (not $imageObj.conversion) }}
@@ -62,9 +62,13 @@ metadata:
 spec:
   disks:
     - device: "{{ $rootDiskDeviceNonTemplated }}"
+{{- if $.Values.provision.common.skipCloudInit }}
+  # No userData because skipCloudInit is set to true
+{{- else }}
 {{- if $mergedDevice.userData }}
   userData: |
     {{- $mergedDevice.userData | nindent 4 }}
+{{- end }}
 {{- end }}
   metadata:
     facility:
