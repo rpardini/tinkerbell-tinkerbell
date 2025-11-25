@@ -122,7 +122,7 @@ spec:
           contents: |
             echo Showcase starting for {{$deviceId}} with hook {{$mergedDevice.hookRef}} and image {{$mergedDevice.imageRef}}...
             set download-url {{ $.Values.tinkerbell.hookURL }}
-            set kernel-params tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{$dev.mac}} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} modules=loop,squashfs,sd-mod,usb-storage initrd={{ $hookObj.initrd }} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
+            set kernel-params tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{ $dev.metadataInstanceId | default $deviceId }} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} modules=loop,squashfs,sd-mod,usb-storage initrd={{ $hookObj.initrd }} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
             echo Kernel image: ${download-url}/{{ $hookObj.kernel }}
             echo Kernel initrd: ${download-url}/{{ $hookObj.initrd }}
             echo Kernel cmdline: ${kernel-params}
@@ -151,7 +151,7 @@ spec:
               menu label Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} {{if $hasFdt }}and FDT {{$dev.pxelinux.fdt}}{{else}}SANS FDT{{end}}
               initrd {{ $hookObj.initrd }}
               linux {{ $hookObj.kernel }}
-              append tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{$dev.mac}} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
+              append tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{ $dev.metadataInstanceId | default $deviceId }} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
               {{- if $hasFdt }}
               fdt {{ $fullFdt }}
               {{- end }}
@@ -443,7 +443,7 @@ spec:
   templateRef: "{{ $deviceId }}-template"
   hardwareRef: "{{ $deviceId }}-hardware"
   hardwareMap:
-    device_1: "{{ $dev.mac }}"
+    device_1: "{{ $dev.metadataInstanceId | default $deviceId }}"
 {{- end }}
 {{- end }}
 {{- end }}
