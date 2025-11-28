@@ -19,7 +19,7 @@ tinkerbell:
 
 actions:
   repository: "quay.io/tinkerbellrpardini/actions" # rpardini's fork with some fixes for arm64
-  version: "latest"
+  version: "v0.0.23" # See https://quay.io/repository/tinkerbellrpardini/actions/image2disk?tab=tags; incl waitdaemon
 
 jobs:
   enabled: true # false to completely skip generating jobs
