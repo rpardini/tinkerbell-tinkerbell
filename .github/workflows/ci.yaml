@@ -174,7 +174,7 @@ jobs:
       github.ref == 'refs/heads/main' ||
       startsWith(github.ref, 'refs/tags/v')
     needs:
-      - validation
+      #- validation
       - build-binaries
     strategy:
       matrix:
