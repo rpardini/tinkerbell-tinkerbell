@@ -42,6 +42,7 @@ tinkerbell:
         dhcpEnabled: false # DO NOT enable DHCP -- this l3-only -- we need Smee only for TFTP/HTTP serving
       tootles:
         bindPort: 50061 # Tootles (Hegel) HTTP port; defaults to 7172 but I've grown fond of 50061
+        instanceEndpoint: true # enable instanceID-based endpoint to _any_ client/IP address
     init: # Not deploying Smee, so init not required
       enabled: false
   service:
