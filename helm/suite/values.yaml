@@ -40,6 +40,7 @@ tinkerbell:
         enableSmee: true # Enable Smee, but notice how smee.dhcpEnabled is false
       smee:
         dhcpEnabled: false # DO NOT enable DHCP -- this l3-only -- we need Smee only for TFTP/HTTP serving
+        tftpBlockSize: 8192 # default is 512; doesn't go much higher than 14xx due to MTU + overhead
       tootles:
         bindPort: 50061 # Tootles (Hegel) HTTP port; defaults to 7172 but I've grown fond of 50061
         instanceEndpoint: true # enable instanceID-based endpoint to _any_ client/IP address
