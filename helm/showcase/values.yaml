@@ -43,15 +43,34 @@ provision:
 
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
-    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20251125-0519/"
-    hookDownloadId: "20251125-0519" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
+    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20251218-2352/"
+    hookDownloadId: "20251218-2352" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
 
     armbianImageOwnerRepo: "armsurvivors/armbian-release" # https://github.com/armsurvivors/armbian-release
-    armbianImageRevision: "25.11.18-1255"
+    armbianImageRevision: "25.12.18-1315"
     armbianImageRelease: "trixie" # bookworm is oldstable already, move on
     armbianImageFormat: ".img" # raw=.img, qcow2=.img.qcow2
     armbianImageVendor: "Armbian-armsurvivors_"
-    armbianImageConversion: "xz-qcow2-to-img-gz"
+    armbianImageConversion: "none" # "xz-qcow2-to-img-gz"
+
+    # Common for all devices with bmc (will be contents of spec.connection in bmc Machine object)
+    bmc:
+      authSecretRef:
+        #namespace:
+        name: homeassistant-bmc-credentials
+      host: https://some.ha.url
+      # port: 66666
+      insecureTLS: false
+      providerOptions:
+        homeassistant:
+          #switchEntityID: "switch...." # should be specified in each device
+          powerOperationDelaySeconds: 5
+
+    bmcSecret: # If set, will create a Secret with these credentials for BMC access. If you need per-device credentials, create secrets separately
+      name: homeassistant-bmc-credentials
+      data:
+        username: something-not-used
+        password: home-assistant-long-lived-token
 
   # Define one key per hook built to be downloaded and made available. Those _must_ match the hardware definitions.
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
@@ -116,6 +135,16 @@ provision:
       kernelCommandLine: ""
       bootMode: reboot # kexec is no-go here, kernel problem? (persists after enabling CONFIG_KEXEC & trying to fix TB action)
 
+    "armbian-uefi-arm64-edge":
+      enabled: false
+      arch: "aarch64"
+      downloadFile: "hook_armbian-uefi-arm64-edge.tar.gz"
+      kernel: "vmlinuz-armbian-uefi-arm64-edge"
+      initrd: "initramfs-armbian-uefi-arm64-edge"
+      dtbDir: "dtbs-armbian-uefi-arm64-edge"
+      kernelCommandLine: ""
+      bootMode: reboot # kexec is no-go here, kernel problem? (persists after enabling CONFIG_KEXEC & trying to fix TB action)
+
   # Define deployment images; we've a few examples using Ubuntu and Armbian
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
   # to download/prepare it even if no device is using it.
@@ -132,6 +161,18 @@ provision:
       doInjectHegelCloudInit: true
       rootfsPartitionNumber: "1" # rootfs is the one and only
       # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
+
+    "radxa-e24c-k8s":
+      enabled: false
+      arch: "aarch64"
+      armbianImageBoard: "radxa-e24c"
+      armbianImageBranch: "edge"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      doGrowPart: false # Armbian does it itself when booted
+      doUserAndSshSetup: false # Armbian does it itself when booted
+      doFixResolvConf: false
+      doInjectHegelCloudInit: true
+      rootfsPartitionNumber: "1" # rootfs is the one and only
 
     "rock5b-k8s":
       enabled: false
@@ -160,6 +201,18 @@ provision:
       # What about extraKernelCommandLine -- @TODO how to inject it into /boot/armbianEnv.txt extraargs?
 
     "blade3-k8s":
+      enabled: false
+      arch: "aarch64"
+      armbianImageBoard: "mixtile-blade3"
+      armbianImageBranch: "edge"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      doGrowPart: false # Armbian does it itself when booted
+      doUserAndSshSetup: false # Armbian does it itself when booted
+      doFixResolvConf: false
+      doInjectHegelCloudInit: true
+      rootfsPartitionNumber: "1" # rootfs is the one and only
+
+    "blade3-vendor-k8s":
       enabled: false
       arch: "aarch64"
       armbianImageBoard: "mixtile-blade3"
@@ -228,8 +281,6 @@ provision:
       armbianImageBoard: "uefi-x86"
       armbianImageBranch: "edge"
       armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
-      armbianImageFormat: ".img.qcow2"
-      armbianImageConversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -244,8 +295,6 @@ provision:
       armbianImageBoard: "uefi-arm64"
       armbianImageBranch: "edge"
       armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
-      armbianImageFormat: ".img.qcow2"
-      armbianImageConversion: "xz-qcow2-to-img-gz"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -267,7 +316,7 @@ hardware:
   devices: # One entry for each machine
 
     "quartz64a":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "quartz64a" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -278,7 +327,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/quartz64a_tinkerbell_l3
 
     "odroidhc4":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "odroidhc4" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
@@ -294,7 +343,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/odroidhc4_tinkerbell_l3
 
     "khadasvim3l":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "khadasvim3l" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
@@ -310,7 +359,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/khadasvim3l_tinkerbell_l3
 
     "nanopct6lts":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "nanopct6lts" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -325,8 +374,24 @@ hardware:
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
 
+    "radxa-e24c":
+      enabled: false
+      arch: aarch64
+      mac: "radxae24c" # not really a MAC, instead an ID
+      rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
+      hookRef: "armbian-rockchip64-edge"
+      imageRef: "radxa-e24c-k8s"
+      extraKernelCommandLine: "console=ttyS0,1500000"
+      netboot: true
+      ipv4:
+        address: 66.66.66.66
+      pxelinux:
+        fdt: "rockchip/rk3528-radxa-e24c-spi.dtb"
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/e24c_tinkerbell_l3
+
     "rock5b":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "rock5b" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -342,7 +407,7 @@ hardware:
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
 
     "cm3588-nas":
-      enabled: true
+      enabled: false
       arch: aarch64
       mac: "cm3588nas" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
@@ -362,8 +427,8 @@ hardware:
       arch: aarch64
       mac: "blade3c" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rk35xx-vendor"
-      imageRef: "blade3-k8s"
+      hookRef: "armbian-rockchip64-edge" # vendor kernel: "armbian-rk35xx-vendor"
+      imageRef: "blade3-k8s" # defaults to edge
       extraKernelCommandLine: "console=ttyS2,1500000"
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nanopct6_tinkerbell_l3
@@ -410,7 +475,7 @@ hardware:
 
     "vm01":
       #namespace: "trixie-capi-demo"
-      enabled: true
+      enabled: false
       arch: x86_64
       mac: "52:54:00:01:03:01"
       netboot: true
@@ -432,10 +497,10 @@ hardware:
 
       "nullpointer": # an old x86 with ASUS UEFI from 2018
         #namespace: "trixie-capi-demo"
-        enabled: true
+        enabled: false
         arch: x86_64
         mac: "2c:4d:54:d3:be:57"
-        metadataInstanceId: "2c:4d:54:d3:be:57" # defaults to device-id (the key in the parent dict)
+        #metadataInstanceId: "2c:4d:54:d3:be:57" # defaults to device-id (the key in the parent dict)
         netboot: true
         uefi: true
         ipv4:
