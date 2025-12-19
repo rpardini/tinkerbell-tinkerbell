@@ -5,8 +5,8 @@
   {{- $imageObj = merge $imageObj $common }}
   {{- if or (not $imageObj.downloadURL) (not $imageObj.image) (not $imageObj.conversion) }}
     {{- $tmpDownFn := (printf "%s%s_%s_%s_%s-%s%s" $imageObj.armbianImageVendor $imageObj.armbianImageRevision $imageObj.armbianImageBoard $imageObj.armbianImageRelease $imageObj.armbianImageBranch $imageObj.armbianImageVariant $imageObj.armbianImageFormat) }}
-    {{- $tmpDownUrl := (printf "https://github.com/%s/releases/download/%s/%s.xz" $imageObj.armbianImageOwnerRepo $imageObj.armbianImageRevision $tmpDownFn) }}
-    {{- $imageObj = merge (dict "conversion" $imageObj.armbianImageConversion "image" (printf "%s.gz" $tmpDownFn) "downloadURL" $tmpDownUrl) $imageObj }}
+    {{- $tmpDownUrl := (printf "https://github.com/%s/releases/download/%s/%s.zst" $imageObj.armbianImageOwnerRepo $imageObj.armbianImageRevision $tmpDownFn) }}
+    {{- $imageObj = merge (dict "conversion" $imageObj.armbianImageConversion "image" (printf "%s.zst" $tmpDownFn) "downloadURL" $tmpDownUrl) $imageObj }}
   {{- end }}
 ---
 # --> ImageId: {{ $imageObjId }}
