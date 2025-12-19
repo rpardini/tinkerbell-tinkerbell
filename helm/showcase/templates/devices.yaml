@@ -39,8 +39,8 @@
 {{- $imageObj = merge $imageObj $common }}
 {{- if or (not $imageObj.downloadURL) (not $imageObj.image) (not $imageObj.conversion) }}
   {{- $tmpDownFn := (printf "%s%s_%s_%s_%s-%s%s" $imageObj.armbianImageVendor $imageObj.armbianImageRevision $imageObj.armbianImageBoard $imageObj.armbianImageRelease $imageObj.armbianImageBranch $imageObj.armbianImageVariant $imageObj.armbianImageFormat) }}
-  {{- $tmpDownUrl := (printf "https://github.com/%s/releases/download/%s/%s.xz" $imageObj.armbianImageOwnerRepo $imageObj.armbianImageRevision $tmpDownFn) }}
-  {{- $imageObj = merge (dict "conversion" $imageObj.armbianImageConversion "image" (printf "%s.gz" $tmpDownFn) "downloadURL" $tmpDownUrl) $imageObj }}
+  {{- $tmpDownUrl := (printf "https://github.com/%s/releases/download/%s/%s.zst" $imageObj.armbianImageOwnerRepo $imageObj.armbianImageRevision $tmpDownFn) }}
+  {{- $imageObj = merge (dict "conversion" $imageObj.armbianImageConversion "image" (printf "%s.zst" $tmpDownFn) "downloadURL" $tmpDownUrl) $imageObj }}
 {{- end }}
 
 ---
@@ -63,6 +63,11 @@ metadata:
     # for CAPT; points to the Template to use for provisioning this Hardware via CAPT
     "hardware.tinkerbell.org/capt-template-override": "{{ $deviceId }}-template"
 spec:
+{{- if $mergedDevice.bmc }}
+  bmcRef:
+    kind: Machine
+    name: "{{ $deviceId }}-bmc"
+{{- end }}
   disks:
     - device: "{{ $rootDiskDeviceNonTemplated }}"
 {{- if $.Values.provision.common.skipCloudInit }}
@@ -299,6 +304,8 @@ spec:
                   Ec2:
                     metadata_urls: ["{{ $.Values.tinkerbell.hegelURL }}/tootles/instanceID/{{ `{{ .Hardware.Metadata.Instance.ID }}` }}"]
                     strict_id: false
+                    max_wait: 20
+                    timeout: 5
                 manage_etc_hosts: localhost
                 warnings:
                   dsid_missing_source: off
@@ -334,6 +341,19 @@ spec:
               CHROOT: y
               DEFAULT_INTERPRETER: "/bin/sh -c"
               CMD_LINE: "rm -v /etc/resolv.conf; mv -v /etc/resolv.conf.orig.tink /etc/resolv.conf"
+          {{- end }}
+
+          {{- if ($mergedDevice.extraProvisioningChrootCommand) }}
+          - name: "extraProvisioningChrootCommand"
+            image: {{ $.Values.actions.repository }}/cexec:{{ $.Values.actions.version }}
+            timeout: 90
+            environment:
+              BLOCK_DEVICE: {{$rootDiskRootfsPartitionDevice}}
+              FS_TYPE: ext4
+              CHROOT: y
+              DEFAULT_INTERPRETER: "/bin/bash -c"
+              CMD_LINE: |
+                {{ $mergedDevice.extraProvisioningChrootCommand | nindent 16 }}
           {{- end }}
 
           {{- if ($imageObj.doAddEFIBootEntry )  }}
@@ -447,6 +467,33 @@ spec:
   hardwareRef: "{{ $deviceId }}-hardware"
   hardwareMap:
     device_1: "{{ $dev.metadataInstanceId | default $deviceId }}"
+---
 {{- end }}
+
+{{- if $mergedDevice.bmc }}
+# Merge $.Values.provision.common.bmc and $mergedDevice.bmc
+{{- $bmcCommon := deepCopy ($.Values.provision.common.bmc | default (dict)) }}
+{{- $bmcMerged := merge $bmcCommon $mergedDevice.bmc }}
+apiVersion: bmc.tinkerbell.org/v1alpha1
+kind: Machine
+metadata:
+  name: "{{ $deviceId }}-bmc"
+  {{- if $.Values.forceNamespace }}
+  namespace: "{{ $.Values.forceNamespace }}"
+  {{- else if $mergedDevice.namespace }}
+  namespace: "{{ $mergedDevice.namespace }}"
+  {{- end }}
+  labels:
+    "app.kubernetes.io/instance": "{{ $.Release.Name }}"
+    "app.kubernetes.io/part-of": "tinkerbell-showcase"
+  # Add a finalizer; the BMC is required to properly shutdown a cluster when deleting it (the Cluster)
+  finalizers: [ "showcase.tinkerbell.org/bmc-required-for-deletion" ]
+spec:
+  connection:
+    {{ $bmcMerged | toYaml | nindent 4 }}
+{{- end }}
+
+
+
 {{- end }}
 {{- end }}
