@@ -59,6 +59,10 @@ metadata:
     "tinkerbell.showcase/deviceId": "{{ $deviceId }}"
     "tinkerbell.showcase/imageRef": "{{ $mergedDevice.imageRef }}"
     "tinkerbell.showcase/hookRef": "{{ $mergedDevice.hookRef }}"
+    # Loop over all tags in mergedDevice.tags (a simple array) and add them as labels with its own value
+    {{- range $tag := $mergedDevice.tags }}
+    "tinkerbell.showcase/tag-{{ $tag }}": "{{ $tag }}"
+    {{- end }}
   annotations:
     # for CAPT; points to the Template to use for provisioning this Hardware via CAPT
     "hardware.tinkerbell.org/capt-template-override": "{{ $deviceId }}-template"
@@ -154,9 +158,9 @@ spec:
             default hook
             menu title Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} via PXELinux
             prompt 1
-            timeout {{$mergedDevice.pxelinux.menuTimeout | default 50 }}
+            timeout {{$mergedDevice.pxelinux.menuTimeout | default 10 }}
             label hook
-              menu label Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} {{if $hasFdt }}and FDT {{$dev.pxelinux.fdt}}{{else}}SANS FDT{{end}}
+              menu label Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} {{if $hasFdt }}and FDT {{$dev.pxelinux.fdt}}{{else}}SANS FDT{{end}} - {{$hookObj.kernelCommandLine}} ++ {{ $dev.extraKernelCommandLine }}
               initrd {{ $hookObj.initrd }}
               linux {{ $hookObj.kernel }}
               append tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{ $dev.metadataInstanceId | default $deviceId }} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
