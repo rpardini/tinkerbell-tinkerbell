@@ -471,6 +471,21 @@ spec:
   hardwareRef: "{{ $deviceId }}-hardware"
   hardwareMap:
     device_1: "{{ $dev.metadataInstanceId | default $deviceId }}"
+  bootOptions:
+    toggleAllowNetboot: false
+    {{- if eq ($dev.wfBootMode | default "standard") "none" }}
+    {{- else if eq ($dev.wfBootMode | default "standard") "standard" }}
+    bootMode: netboot
+    {{- else if eq ($dev.wfBootMode | default "standard") "powerCycle" }}
+    bootMode: customboot
+    custombootConfig:
+      preparingActions:
+        - powerAction: "off"
+        - powerAction: "on"
+      postActions:
+        - powerAction: "off"
+        - powerAction: "on"
+    {{- end }}
 ---
 {{- end }}
 
