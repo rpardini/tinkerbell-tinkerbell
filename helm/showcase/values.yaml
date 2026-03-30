@@ -126,6 +126,16 @@ provision:
       kernelCommandLine: "acpi=off efi=noruntime"
       bootMode: reboot
 
+    "armbian-meson64-oldlts":
+      enabled: false
+      arch: "aarch64"
+      downloadFile: "hook_armbian-meson64-oldlts.tar.gz"
+      kernel: "vmlinuz-armbian-meson64-oldlts"
+      initrd: "initramfs-armbian-meson64-oldlts"
+      dtbDir: "dtbs-armbian-meson64-oldlts"
+      kernelCommandLine: "acpi=off efi=noruntime"
+      bootMode: reboot
+
     "default-hook-amd64":
       enabled: false
       arch: "x86_64"
