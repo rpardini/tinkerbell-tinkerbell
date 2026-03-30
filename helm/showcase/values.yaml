@@ -3,7 +3,7 @@ tinkerbell:
   hostDirectory: "/opt/hook" # hostPath where Hook & images are downloaded & served from
   imagesURL: "http://192.168.66.170:32083" # # URL where images are served from
   hookURL: "http://192.168.66.170:32083" # # URL where hook vmlinuz/initrds are served from
-  hegelURL: "http://192.168.66.170:50061" # tootles URL; usually 7172
+  hegelURL: "http://192.168.66.170:7080" # tootles URL
 
   # For netbooting (TFTP only, no DHCP here)
   syslogHost: "192.168.66.170" # Syslog host, usually smee
