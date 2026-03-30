@@ -297,7 +297,7 @@ provision:
       enabled: false
       arch: "aarch64"
       armbianImageBoard: "odroidhc4"
-      armbianImageBranch: "edge"
+      armbianImageBranch: "oldlts" # "edge"
       armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
@@ -387,8 +387,8 @@ hardware:
       arch: aarch64
       mac: "odroidhc4" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
-      hookRef: "armbian-meson64-edge"
-      imageRef: "odroidhc4-k8s"
+      hookRef: "armbian-meson64-oldlts"
+      imageRef: "odroidhc4-k8s" # which is on oldlts too
       extraKernelCommandLine: "console=ttyAML0,115200"
       netboot: true
       ipv4:
