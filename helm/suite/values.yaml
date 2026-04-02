@@ -18,6 +18,11 @@ showcase:
     hooks:
       enabled: true # again true, as we can do l3 provisioning as long as we don't do DHCP # before: cos we are doing L3 provisioning, hooks are already in the bootable media
 
+imageVolumes:
+  captain:
+    enabled: true # @TODO
+    reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-666
+    pullPolicy: IfNotPresent
 
 #### Tinkerbell (-ng) subChart.
 tinkerbell:
