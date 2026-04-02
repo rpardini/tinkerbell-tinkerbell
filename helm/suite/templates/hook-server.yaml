@@ -67,6 +67,11 @@ spec:
             - mountPath: /usr/share/nginx/html
               name: hook-artifacts
               readOnly: true
+          {{- range $volumeId, $yaml := .Values.imageVolumes }}
+            - mountPath: /usr/share/nginx/html/{{ $volumeId }}
+              name: {{ $volumeId }}
+              readOnly: true
+          {{- end }}
       volumes:
         - name: nginx-conf
           configMap:
@@ -74,6 +79,12 @@ spec:
             items:
               - key: nginx.conf
                 path: nginx.conf
+      {{- range $volumeId, $yaml := .Values.imageVolumes }}
+        - name: {{ $volumeId }}
+          image:
+            pullPolicy: {{ $yaml.pullPolicy | default "IfNotPresent" }}
+            reference: {{ $yaml.reference }}
+      {{- end }}
         - name: hook-artifacts
           hostPath:
             {{- if .Values.hookImageServer.hostDirectory }}
