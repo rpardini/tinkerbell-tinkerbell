@@ -22,7 +22,7 @@
 {{- end -}}
 {{- end }}
 
-{{- if or $enabledByDeviceUsage $hook.enabled }}
+{{- if and (or $enabledByDeviceUsage $hook.enabled) (not $hook.imageVolumeID) }}
 # Enabled hook: {{$hookId}} - force enabled? {{$hook.enabled}} -- enabled by device usage? {{$enabledByDeviceUsage}}
 apiVersion: v1
 kind: ConfigMap
