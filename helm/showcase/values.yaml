@@ -19,13 +19,13 @@ tinkerbell:
 
 actions:
   repository: "quay.io/tinkerbellrpardini/actions" # rpardini's fork with some fixes for arm64
-  version: "v0.0.23" # See https://quay.io/repository/tinkerbellrpardini/actions/image2disk?tab=tags; incl waitdaemon
+  version: "v0.0.27" # See https://quay.io/repository/tinkerbellrpardini/actions/image2disk?tab=tags; incl waitdaemon
 
 jobs:
   enabled: true # false to completely skip generating jobs
   nodeSelector: null # or an object with keys and values for NodeSelector
   hooks:
-    enabled: true # enable hook download jobs? (depends on jobs.enabled too)
+    enabled: false # enable hook download jobs? (depends on jobs.enabled too)
   images:
     enabled: true # enable image download jobs? (depends on jobs.enabled too)
 
@@ -43,11 +43,11 @@ provision:
 
     # Used together with downloadFile field in each hook;
     # Check https://github.com/rpardini/tinkerbell-hook/releases/ for updates
-    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20260330-0651/"
-    hookDownloadId: "20260330-0651" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
+    hookDownloadBaseURL: "https://github.com/rpardini/tinkerbell-hook/releases/download/20260330-1738/"
+    hookDownloadId: "20260330-1738" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
 
     armbianImageOwnerRepo: "armsurvivors/armbian-release" # https://github.com/armsurvivors/armbian-release
-    armbianImageRevision: "26.03.30-1612"
+    armbianImageRevision: "26.04.16-1640"
     armbianImageRelease: "trixie" # bookworm is oldstable already, move on
     armbianImageFormat: ".img" # raw=.img, qcow2=.img.qcow2
     armbianImageVendor: "Armbian-armsurvivors_"
@@ -76,16 +76,6 @@ provision:
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
   # to download/prepare it even if no device is using it.
   hook:
-    "armbian-rockchip64-edge":
-      enabled: false
-      arch: "aarch64"
-      downloadFile: "hook_armbian-rockchip64-edge.tar.gz"
-      kernel: "vmlinuz-armbian-rockchip64-edge"
-      initrd: "initramfs-armbian-rockchip64-edge"
-      dtbDir: "dtbs-armbian-rockchip64-edge"
-      kernelCommandLine: ""
-      bootMode: reboot
-
     "armbian-genio-edge":
       enabled: false
       arch: "aarch64"
@@ -96,74 +86,65 @@ provision:
       kernelCommandLine: "" # ttyS0,921600
       bootMode: reboot
 
-    "armbian-rk35xx-vendor":
+    "default-captain-amd64":
       enabled: false
-      arch: "aarch64"
-      downloadFile: "hook_armbian-rk35xx-vendor.tar.gz"
-      kernel: "vmlinuz-armbian-rk35xx-vendor"
-      initrd: "initramfs-armbian-rk35xx-vendor"
-      dtbDir: "dtbs-armbian-rk35xx-vendor"
-      kernelCommandLine: "" # acpi=off efi=noruntime splash=verbose
-      bootMode: reboot
-
-    "armbian-bcm2711-current":
-      enabled: false
-      arch: "aarch64"
-      downloadFile: "hook_armbian-bcm2711-current.tar.gz"
-      kernel: "vmlinuz-armbian-bcm2711-current"
-      initrd: "initramfs-armbian-bcm2711-current"
-      dtbDir: "dtbs-armbian-bcm2711-current"
-      kernelCommandLine: ""
-      bootMode: reboot
-
-    "armbian-meson64-edge":
-      enabled: false
-      arch: "aarch64"
-      downloadFile: "hook_armbian-meson64-edge.tar.gz"
-      kernel: "vmlinuz-armbian-meson64-edge"
-      initrd: "initramfs-armbian-meson64-edge"
-      dtbDir: "dtbs-armbian-meson64-edge"
-      kernelCommandLine: "acpi=off efi=noruntime"
-      bootMode: reboot
-
-    "armbian-meson64-oldlts":
-      enabled: false
-      arch: "aarch64"
-      downloadFile: "hook_armbian-meson64-oldlts.tar.gz"
-      kernel: "vmlinuz-armbian-meson64-oldlts"
-      initrd: "initramfs-armbian-meson64-oldlts"
-      dtbDir: "dtbs-armbian-meson64-oldlts"
-      kernelCommandLine: "acpi=off efi=noruntime"
-      bootMode: reboot
-
-    "default-hook-amd64":
-      enabled: false
+      imageVolumeID: "captain" # really just a subdirectory; implies no download
       arch: "x86_64"
-      downloadFile: "hook_x86_64.tar.gz"
-      kernel: "vmlinuz-x86_64"
-      initrd: "initramfs-x86_64"
-      kernelCommandLine: ""
-      bootMode: reboot
+      kernel: "captain/vmlinuz-trixie-full-x86_64"
+      initrd: "captain/initramfs-trixie-full-x86_64"
+      kernelCommandLine: "systemd.journald.forward_to_console=1"
+      bootMode: systemdReboot
 
-    "default-hook-aarch64":
+    "default-captain-aarch64":
       enabled: false
+      imageVolumeID: "captain" # really just a subdirectory; implies no download
       arch: "aarch64"
-      downloadFile: "hook_aarch64.tar.gz"
-      kernel: "vmlinuz-aarch64"
-      initrd: "initramfs-aarch64"
-      dtbDir: "dtbs-aarch64"
-      kernelCommandLine: ""
-      bootMode: reboot # kexec is no-go here, kernel problem? (persists after enabling CONFIG_KEXEC & trying to fix TB action)
+      kernel: "captain/vmlinuz-trixie-full-aarch64"
+      initrd: "captain/initramfs-trixie-full-aarch64"
+      dtbDir: "captain/dtbs-trixie-full-aarch64"
+      kernelCommandLine: "systemd.journald.forward_to_console=1"
+      bootMode: systemdReboot
 
-    "armbian-uefi-arm64-edge":
+    "captain-rockchip64-edge":
       enabled: false
+      imageVolumeID: "captain-rockchip64" # really just a subdirectory; implies no download
       arch: "aarch64"
-      downloadFile: "hook_armbian-uefi-arm64-edge.tar.gz"
-      kernel: "vmlinuz-armbian-uefi-arm64-edge"
-      initrd: "initramfs-armbian-uefi-arm64-edge"
-      dtbDir: "dtbs-armbian-uefi-arm64-edge"
-      kernelCommandLine: ""
-      bootMode: reboot # kexec is no-go here, kernel problem? (persists after enabling CONFIG_KEXEC & trying to fix TB action)
+      kernel: "captain-rockchip64/vmlinuz-trixie-rockchip64-aarch64"
+      initrd: "captain-rockchip64/initramfs-trixie-rockchip64-aarch64"
+      dtbDir: "captain-rockchip64/dtb-trixie-rockchip64-aarch64"
+      kernelCommandLine: "systemd.journald.forward_to_console=1"
+      bootMode: systemdReboot
+
+    "captain-rockchip64-vendor":
+      enabled: false
+      imageVolumeID: "captain-rockchip64-vendor" # really just a subdirectory; implies no download
+      arch: "aarch64"
+      kernel: "captain-rockchip64-vendor/vmlinuz-trixie-rockchip64-vendor-aarch64"
+      initrd: "captain-rockchip64-vendor/initramfs-trixie-rockchip64-vendor-aarch64"
+      dtbDir: "captain-rockchip64-vendor/dtb-trixie-rockchip64-vendor-aarch64"
+      kernelCommandLine: "systemd.journald.forward_to_console=1"
+      bootMode: systemdReboot
+
+    "captain-meson64-edge":
+      enabled: false
+      imageVolumeID: "captain-meson64" # really just a subdirectory; implies no download
+      arch: "aarch64"
+      kernel: "captain-meson64/vmlinuz-trixie-meson64-aarch64"
+      initrd: "captain-meson64/initramfs-trixie-meson64-aarch64"
+      dtbDir: "captain-meson64/dtb-trixie-meson64-aarch64"
+      kernelCommandLine: "systemd.journald.forward_to_console=1"
+      bootMode: systemdReboot
+
+    "captain-armbian-rpi":
+      enabled: false
+      imageVolumeID: "captain-armbian-rpi" # really just a subdirectory; implies no download
+      arch: "aarch64"
+      kernel: "captain-armbian-rpi/vmlinuz-trixie-armbian-rpi-aarch64"
+      initrd: "captain-armbian-rpi/initramfs-trixie-armbian-rpi-aarch64"
+      dtbDir: "captain-armbian-rpi/dtb-trixie-armbian-rpi-aarch64"
+      kernelCommandLine: "systemd.journald.forward_to_console=1"
+      bootMode: systemdReboot
+
 
   # Define deployment images; we've a few examples using Ubuntu and Armbian
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
@@ -232,10 +213,10 @@ provision:
       doInjectHegelCloudInit: true
       rootfsPartitionNumber: "1" # rootfs is the one and only
 
-    "meko4x4-k8s":
+    "meko-r58x-pro-k8s":
       enabled: false
       arch: "aarch64"
-      armbianImageBoard: "mekotronics-r58-4x4"
+      armbianImageBoard: "mekotronics-r58x-pro"
       armbianImageBranch: "edge" # I've also vendor
       armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
       doGrowPart: false # Armbian does it itself when booted
@@ -383,23 +364,12 @@ hardware:
 
   devices: # One entry for each machine
 
-    "quartz64a":
-      enabled: false
-      arch: aarch64
-      mac: "quartz64a" # not really a MAC, instead an ID
-      rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge"
-      imageRef: "quartz64a-k8s"
-      extraKernelCommandLine: "console=ttyS2,1500000"
-      userData: |
-        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/quartz64a_tinkerbell_l3
-
     "odroidhc4":
       enabled: false
       arch: aarch64
       mac: "odroidhc4" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
-      hookRef: "armbian-meson64-oldlts"
+      hookRef: "captain-meson64-edge"
       imageRef: "odroidhc4-k8s" # which is on oldlts too
       extraKernelCommandLine: "console=ttyAML0,115200"
       netboot: true
@@ -415,7 +385,7 @@ hardware:
       arch: aarch64
       mac: "zero2" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/mmc-SOMETHING-SOMETHING"
-      hookRef: "armbian-meson64-edge"
+      hookRef: "captain-meson64-edge"
       imageRef: "zero2-k8s"
       extraKernelCommandLine: "console=ttyAML0,115200"
       netboot: true
@@ -431,7 +401,7 @@ hardware:
       arch: aarch64
       mac: "khadasvim3l" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/sata-SOMETHING-SOMETHING"
-      hookRef: "armbian-meson64-edge"
+      hookRef: "captain-meson64-edge"
       imageRef: "khadasvim3l-k8s"
       extraKernelCommandLine: "console=ttyAML0,115200"
       netboot: true
@@ -447,7 +417,7 @@ hardware:
       arch: aarch64
       mac: "nanopct6lts" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge"
+      hookRef: "captain-rockchip64-edge"
       imageRef: "nanopct6lts-k8s"
       extraKernelCommandLine: "console=ttyS2,1500000"
       netboot: true
@@ -463,7 +433,7 @@ hardware:
       arch: aarch64
       mac: "radxae24c" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge"
+      hookRef: "captain-rockchip64-edge"
       imageRef: "radxa-e24c-k8s"
       extraKernelCommandLine: "console=ttyS0,1500000"
       netboot: true
@@ -479,7 +449,7 @@ hardware:
       arch: aarch64
       mac: "rock5b" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge"
+      hookRef: "captain-rockchip64-edge"
       imageRef: "rock5b-k8s"
       extraKernelCommandLine: "console=ttyS2,1500000"
       netboot: true
@@ -495,7 +465,7 @@ hardware:
       arch: aarch64
       mac: "cm3588nas" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge"
+      hookRef: "captain-rockchip64-edge"
       imageRef: "cm3588-nas-k8s"
       extraKernelCommandLine: "console=ttyS2,1500000"
       netboot: true
@@ -511,7 +481,7 @@ hardware:
       arch: aarch64
       mac: "core3588e" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge"
+      hookRef: "captain-rockchip64-edge"
       imageRef: "core3588e-k8s"
       extraKernelCommandLine: "console=ttyS2,1500000"
       netboot: true
@@ -522,19 +492,19 @@ hardware:
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/cm3588_tinkerbell_l3
 
-    "meko4x4":
+    "meko-r58x-pro":
       enabled: false
       arch: aarch64
       mac: "meko4x4" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge"
-      imageRef: "meko4x4-k8s"
-      extraKernelCommandLine: "console=ttyS2,1500000"
+      hookRef: "captain-rockchip64-edge"
+      imageRef: "meko-r58x-pro-k8s"
+      extraKernelCommandLine: "console=ttyS2,1500000" # systemd.journald.console=ttyS2 ?
       netboot: true
       ipv4:
         address: 66.66.66.66
       pxelinux:
-        fdt: "rockchip/rk3588-blueberry-r58-4x4.dtb" # custom DTB from rpardini's fork
+        fdt: "rockchip/rk3588-mekotronics-r58x-pro.dtb" # custom DTB from Armbian/rpardini
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/meko4x4_tinkerbell_l3
 
@@ -559,7 +529,10 @@ hardware:
       arch: aarch64
       mac: "blade3c" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-rockchip64-edge" # vendor kernel: "armbian-rk35xx-vendor"
+      hookRef: "captain-rockchip64-vendor" # edge: "armbian-rockchip64-edge"
+      pxelinux:
+        #fdt: "rockchip/rk3588-mixtile-blade3.dtb" # MAINLINE/EDGE: custom DTB from rpardini's fork
+        fdt: "rockchip/rk3588-blade3-v101-linux.dtb" # VENDOR
       imageRef: "blade3-k8s" # defaults to edge
       extraKernelCommandLine: "console=ttyS2,1500000"
       userData: |
@@ -571,7 +544,7 @@ hardware:
       arch: aarch64
       mac: "rpi"
       rootDisk: "/dev/disk/by-id/ata-2105_naa.5000000000000001"
-      hookRef: "armbian-bcm2711-current"
+      hookRef: "captain-armbian-rpi"
       imageRef: "rpi4b-k8s"
       extraKernelCommandLine: "console=tty1 console=ttyAMA0,115200 loglevel=7" # Last console defined "wins", thus use tty1 last if no serial console
       userData: |
@@ -582,7 +555,7 @@ hardware:
       arch: x86_64
       mac: "vm-amd64"
       rootDisk: "/dev/nvme0n1"
-      hookRef: "default-hook-amd64"
+      hookRef: "default-captain-amd64"
       imageRef: "amd64-k8s"
       extraKernelCommandLine: "console=ttyS0"
       # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
@@ -595,7 +568,7 @@ hardware:
       arch: aarch64
       mac: "vm-arm64"
       rootDisk: "/dev/nvme0n1"
-      hookRef: "default-hook-aarch64"
+      hookRef: "default-captain-aarch64"
       imageRef: "arm64-k8s"
       extraKernelCommandLine: "console=ttyAMA0"
       ipv4:
@@ -619,7 +592,7 @@ hardware:
         dns: [ "192.168.66.1" ]
         time_servers: [ "192.168.66.1" ]
       rootDisk: "/dev/smth-smth-NOT-YET" # prolly not yet...
-      hookRef: "default-hook-amd64"
+      hookRef: "default-captain-amd64"
       imageRef: "amd64-k8s"
       extraKernelCommandLine: "console=ttyS0"
       # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
@@ -627,23 +600,23 @@ hardware:
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
 
-      "nullpointer": # an old x86 with ASUS UEFI from 2018
-        #namespace: "trixie-capi-demo"
-        enabled: false
-        arch: x86_64
-        mac: "2c:4d:54:d3:be:57"
-        #metadataInstanceId: "2c:4d:54:d3:be:57" # defaults to device-id (the key in the parent dict)
-        netboot: true
-        uefi: true
-        ipv4:
-          address: 192.168.66.60
-          netmask: 255.255.255.0
-        rootDisk: "/dev/disk/by-id/nvme-WD_Blue_SN570_1TB_2147BV449609"
-        hookRef: "default-hook-amd64"
-        imageRef: "amd64-k8s"
-        extraKernelCommandLine: "console=tty1" # No serial console. usb-tty-dupont-tty-usb hack one day
-        overrideGrubCommandLine: "console=tty1" # No serial console in the target image's grub; override grub.d with a 99-
-        # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
-        # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
-        userData: |
-          #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/arm2025_nullpointer
+    "nullpointer": # an old x86 with ASUS UEFI from 2018
+      #namespace: "trixie-capi-demo"
+      enabled: false
+      arch: x86_64
+      mac: "2c:4d:54:d3:be:57"
+      #metadataInstanceId: "2c:4d:54:d3:be:57" # defaults to device-id (the key in the parent dict)
+      netboot: true
+      uefi: true
+      ipv4:
+        address: 192.168.66.60
+        netmask: 255.255.255.0
+      rootDisk: "/dev/disk/by-id/nvme-WD_Blue_SN570_1TB_2147BV449609"
+      hookRef: "default-captain-amd64"
+      imageRef: "amd64-k8s"
+      extraKernelCommandLine: "console=tty1" # No serial console. usb-tty-dupont-tty-usb hack one day
+      overrideGrubCommandLine: "console=tty1" # No serial console in the target image's grub; override grub.d with a 99-
+      # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
+      # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/arm2025_nullpointer
