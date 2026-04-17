@@ -435,7 +435,7 @@ spec:
               BLOCK_DEVICE: {{$rootDiskRootfsPartitionDevice}}
               FS_TYPE: ext4
               IMAGE: {{ $.Values.actions.repository }}/kexec:{{ $.Values.actions.version }}
-              WAIT_SECONDS: 0
+              WAIT_SECONDS: 5
             volumes:
               - /var/run/docker.sock:/var/run/docker.sock
           {{- end }}
@@ -447,10 +447,25 @@ spec:
             pid: host
             command: ["reboot"]
             environment:
-              IMAGE: alpine
-              WAIT_SECONDS: 0
+              IMAGE: docker.io/library/alpine:3
+              WAIT_SECONDS: 5
             volumes:
               - /var/run/docker.sock:/var/run/docker.sock
+          {{- end }}
+
+          {{- if eq $hookObj.bootMode "systemdReboot" }}
+          - name: "reboot"
+            image: {{ $.Values.actions.repository }}/waitdaemon:{{ $.Values.actions.version }}
+            timeout: 90
+            pid: host
+            command: ["nsenter", "--target", "1", "--pid", "--mount", "--uts", "--ipc", "--net", "systemctl", "reboot"]
+            environment:
+              IMAGE: docker.io/robertdebock/debian:latest
+              WAIT_SECONDS: 5
+            volumes:
+              - /var/run/docker.sock:/var/run/docker.sock
+              - /run/systemd:/run/systemd
+              - /run/dbus:/run/dbus
           {{- end }}
 ---
 {{- if $.Values.workflows.enabled }}
