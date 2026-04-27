@@ -44,6 +44,7 @@ tmp/
 *.tgz
 Chart.lock
 .vscode/
+.idea/
 
 # Web UI
 ui/node_modules/
