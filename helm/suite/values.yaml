@@ -18,12 +18,6 @@ showcase:
     hooks:
       enabled: true # again true, as we can do l3 provisioning as long as we don't do DHCP # before: cos we are doing L3 provisioning, hooks are already in the bootable media
 
-imageVolumes:
-  captain:
-    enabled: true # @TODO
-    reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-666
-    pullPolicy: IfNotPresent
-
 #### Tinkerbell (-ng) subChart.
 tinkerbell:
   enabled: true
@@ -34,22 +28,102 @@ tinkerbell:
       enabled: false # no migration here
     kubevip:
       enabled: false # suite does not use Smee at all, much less kubevip
+  service:
+    type: ClusterIP # we're already in hostNetwork mode
+    #lbClass: "io.cilium/node" # Use Cilium's Node LB
   deployment:
     daemonSet:
       enabled: true # if true, it becomes actually a DaemonSet, not Deployment
     hostNetwork: true # deploy on the host network
+    init: # Not deploying Smee, so init not required
+      enabled: false
     envs:
       globals:
-        enableRufioController: false # do not deploy Rufio  (BMC controller)
+        enableRufioController: true # enable Rufio, we've homeassistant BMCs after all
         enableSecondstar: false # do not deploy Secondstar (Serial over SSH)
         enableSmee: true # Enable Smee, but notice how smee.dhcpEnabled is false
+      tootles:
+        instanceEndpoint: true # enable instanceID-based endpoint to _any_ client/IP address
       smee:
         dhcpEnabled: false # DO NOT enable DHCP -- this l3-only -- we need Smee only for TFTP/HTTP serving
         tftpBlockSize: 8192 # default is 512; doesn't go much higher than 14xx due to MTU + overhead
-      tootles:
-        instanceEndpoint: true # enable instanceID-based endpoint to _any_ client/IP address
-    init: # Not deploying Smee, so init not required
-      enabled: false
-  service:
-    type: ClusterIP # we're already in hostNetwork mode
-    #lbClass: "io.cilium/node" # Use Cilium's Node LB
+        tftpServerEnabled: true # false to use some external tftp
+        tftpSinglePort: false # use multiple ports for much faster tftp (we're in hostNetwork mode anyway)
+        tftpAssetDir: "/opt/hook" # See volumes & volumeMounts below; needs to match hostPath; requires a nodeSelector
+    volumes:
+      - name: hook-artifacts
+        hostPath: # requires a nodeSelector
+          path: /opt/hook
+          type: DirectoryOrCreate
+      - name: captain
+        image:
+          pullPolicy: IfNotPresent
+          reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-full
+      - name: captain-rockchip64
+        image:
+          pullPolicy: IfNotPresent
+          reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-rockchip64-arm64
+      - name: captain-rockchip64-vendor
+        image:
+          pullPolicy: IfNotPresent
+          reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-rockchip64-vendor-arm64
+      - name: captain-meson64
+        image:
+          pullPolicy: IfNotPresent
+          reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-meson64-arm64
+      - name: captain-armbian-rpi
+        image:
+          pullPolicy: IfNotPresent
+          reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-armbian-rpi-arm64
+      - name: captain-genio
+        image:
+          pullPolicy: IfNotPresent
+          reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-genio-arm64
+    volumeMounts:
+      - mountPath: /opt/hook
+        name: hook-artifacts
+        readOnly: false # so the captain subdir can be created? k3s shit?
+      - mountPath: /opt/hook/captain
+        name: captain
+        readOnly: true
+      - mountPath: /opt/hook/captain-rockchip64
+        name: captain-rockchip64
+        readOnly: true
+      - mountPath: /opt/hook/captain-rockchip64-vendor
+        name: captain-rockchip64-vendor
+        readOnly: true
+      - mountPath: /opt/hook/captain-meson64
+        name: captain-meson64
+        readOnly: true
+      - mountPath: /opt/hook/captain-armbian-rpi
+        name: captain-armbian-rpi
+        readOnly: true
+      - mountPath: /opt/hook/captain-genio
+        name: captain-genio
+        readOnly: true
+
+imageVolumes:
+  captain:
+    enabled: true
+    reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-full
+    pullPolicy: IfNotPresent
+  captain-rockchip64:
+    enabled: true
+    reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-rockchip64-arm64
+    pullPolicy: IfNotPresent
+  captain-rockchip64-vendor:
+    enabled: true
+    reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-rockchip64-vendor-arm64
+    pullPolicy: IfNotPresent
+  captain-meson64:
+    enabled: true
+    reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-meson64-arm64
+    pullPolicy: IfNotPresent
+  captain-armbian-rpi:
+    enabled: true
+    reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-armbian-rpi-arm64
+    pullPolicy: IfNotPresent
+  captain-genio:
+    enabled: true
+    reference: ghcr.io/rpardini/captain/artifacts:v0.0.0-3797ddb-trixie-genio-arm64
+    pullPolicy: IfNotPresent
