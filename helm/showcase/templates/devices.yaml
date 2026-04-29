@@ -142,6 +142,35 @@ spec:
             initrd ${download-url}/{{ $hookObj.initrd }}
             imgstat
             boot
+        {{- if $dev.piSerialNum }}
+        rpiNetboot:
+          assetRewrite: "{{ $hookObj.imageVolumeID }}/firmware-rpi"
+          piSerialNum: "{{$dev.piSerialNum}}"
+          cmdlineTxtTemplate: |
+            tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{ $dev.metadataInstanceId | default $deviceId }} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} modules=loop,squashfs,sd-mod,usb-storage initrd={{ $hookObj.initrd }} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
+          # See https://www.raspberrypi.com/documentation/computers/config_txt.html#initramfs
+          configTxtTemplate: |
+            sha256=0
+            uart_2ndstage=1
+            gpu_mem=16
+            kernel=kernel8.img
+            initramfs initramfs8 followkernel
+            cmdline=cmdline.txt
+            arm_64bit=1
+            arm_boost=1
+            enable_uart=1
+            dtoverlay=disable-bt
+            dtoverlay=disable-wifi
+            avoid_warnings=2
+            dtoverlay=vc4-kms-v3d,noaudio
+            [pi4]
+            gpu_mem=64
+            dtoverlay=vc4-kms-v3d-pi4,noaudio
+            [pi5]
+            dtoverlay=vc4-kms-v3d-pi5,noaudio
+            [all]
+            hdmi_safe=1
+        {{- end }}
         {{- if $dev.pxelinux }}
         pxelinux:
           {{- if $dev.pxelinux.template }}
