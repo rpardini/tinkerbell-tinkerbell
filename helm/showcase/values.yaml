@@ -47,7 +47,7 @@ provision:
     hookDownloadId: "20260330-1738" # If the ID changes, all hooks will be re-downloaded. Can't contain slashes or spaces
 
     armbianImageOwnerRepo: "armsurvivors/armbian-release" # https://github.com/armsurvivors/armbian-release
-    armbianImageRevision: "26.04.16-1640"
+    armbianImageRevision: "26.04.23-1664"
     armbianImageRelease: "trixie" # bookworm is oldstable already, move on
     armbianImageFormat: ".img" # raw=.img, qcow2=.img.qcow2
     armbianImageVendor: "Armbian-armsurvivors_"
@@ -76,16 +76,6 @@ provision:
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
   # to download/prepare it even if no device is using it.
   hook:
-    "armbian-genio-edge":
-      enabled: false
-      arch: "aarch64"
-      downloadFile: "hook_armbian-genio-edge.tar.gz"
-      kernel: "vmlinuz-armbian-genio-edge"
-      initrd: "initramfs-armbian-genio-edge"
-      dtbDir: "dtbs-armbian-genio-edge"
-      kernelCommandLine: "" # ttyS0,921600
-      bootMode: reboot
-
     "default-captain-amd64":
       enabled: false
       imageVolumeID: "captain" # really just a subdirectory; implies no download
@@ -135,7 +125,7 @@ provision:
       kernelCommandLine: "systemd.journald.forward_to_console=1"
       bootMode: systemdReboot
 
-    "captain-armbian-rpi":
+    "captain-armbian-rpi-uboot": # via u-boot
       enabled: false
       imageVolumeID: "captain-armbian-rpi" # really just a subdirectory; implies no download
       arch: "aarch64"
@@ -145,6 +135,25 @@ provision:
       kernelCommandLine: "systemd.journald.forward_to_console=1"
       bootMode: systemdReboot
 
+    "captain-armbian-rpi": # rpi eeprom netboot
+      enabled: false
+      imageVolumeID: "captain-armbian-rpi" # really just a subdirectory; implies no download
+      arch: "aarch64"
+      kernel: "captain-armbian-rpi/vmlinuz-trixie-armbian-rpi-aarch64"
+      initrd: "captain-armbian-rpi/initramfs-trixie-armbian-rpi-aarch64"
+      dtbDir: "captain-armbian-rpi/dtb-trixie-armbian-rpi-aarch64"
+      kernelCommandLine: "systemd.journald.forward_to_console=1"
+      bootMode: systemdReboot
+
+    "captain-genio-edge":
+      enabled: false
+      arch: "aarch64"
+      imageVolumeID: "captain-genio" # really just a subdirectory; implies no download
+      kernel: "captain-genio/vmlinuz-trixie-genio-aarch64"
+      initrd: "captain-genio/initramfs-trixie-genio-aarch64"
+      dtbDir: "captain-genio/dtb-trixie-genio-aarch64"
+      kernelCommandLine: "systemd.journald.forward_to_console=1"
+      bootMode: systemdReboot
 
   # Define deployment images; we've a few examples using Ubuntu and Armbian
   # Important: each definition will be auto-enabled when they're referenced in an enabled device. You can force them enabled: true
@@ -155,7 +164,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "nanopct6-lts"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -168,7 +177,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "radxa-e24c"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -180,7 +189,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "rock-5b"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -193,7 +202,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "cm3588-nas"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -206,7 +215,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "mixtile-core3588e"
       armbianImageBranch: "edge" # I've also vendor
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -218,7 +227,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "mekotronics-r58x-pro"
       armbianImageBranch: "edge" # I've also vendor
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -229,8 +238,8 @@ provision:
       enabled: false
       arch: "aarch64"
       armbianImageBoard: "radxa-nio-12l"
-      armbianImageBranch: "collabora" # eg edge, but it's called collabora
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34-ufs" # ATTENTION: Genio has extra -ufs at end
+      armbianImageBranch: "edge" # nee collabora
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35-ufs" # ATTENTION: Genio has extra -ufs at end
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -242,7 +251,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "mixtile-blade3"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -254,7 +263,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "mixtile-blade3"
       armbianImageBranch: "vendor"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -266,7 +275,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "quartz64a"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -279,7 +288,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "odroidhc4"
       armbianImageBranch: "oldlts" # "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -292,7 +301,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "radxa-zero2"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -304,7 +313,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "khadas-vim3l"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -317,7 +326,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "rpi4b"
       armbianImageBranch: "current"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -329,7 +338,7 @@ provision:
       arch: "x86_64"
       armbianImageBoard: "uefi-x86"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -343,7 +352,7 @@ provision:
       arch: "aarch64"
       armbianImageBoard: "uefi-arm64"
       armbianImageBranch: "edge"
-      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.34"
+      armbianImageVariant: "metadata-serialconsole-cloud-k8s-1.35"
       doGrowPart: false # Armbian does it itself when booted
       doUserAndSshSetup: false # Armbian does it itself when booted
       doFixResolvConf: false
@@ -513,14 +522,15 @@ hardware:
       arch: aarch64
       mac: "nio-12l" # not really a MAC, instead an ID
       rootDisk: "/dev/disk/by-id/nvme-SOMETHING-SOMETHING"
-      hookRef: "armbian-genio-edge"
+      hookRef: "captain-genio-edge"
       imageRef: "nio-12l-k8s"
       extraKernelCommandLine: "console=ttyS0,921600"
       netboot: true
       ipv4:
         address: 66.66.66.66
       pxelinux:
-        fdt: "mediatek/mt8395-radxa-nio-12l-extra.dtb" # custom DTB from rpardini's fork
+        #fdt: "mediatek/mt8395-radxa-nio-12l-extra.dtb" # custom DTB from rpardini's fork - missing?
+        fdt: "mediatek/mt8395-radxa-nio-12l.dtb" # Collabora's standard one/upstream
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/nio-12l_tinkerbell_l3
 
@@ -545,41 +555,13 @@ hardware:
       mac: "rpi"
       rootDisk: "/dev/disk/by-id/ata-2105_naa.5000000000000001"
       hookRef: "captain-armbian-rpi"
+      piSerialNum: "wrongPiSerialNum" # 8 bytes. @TODO how to obtain it? UART?
       imageRef: "rpi4b-k8s"
       extraKernelCommandLine: "console=tty1 console=ttyAMA0,115200 loglevel=7" # Last console defined "wins", thus use tty1 last if no serial console
       userData: |
         #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/rpi4b_tinkerbell_l3
 
-    "vm-amd64":
-      enabled: false
-      arch: x86_64
-      mac: "vm-amd64"
-      rootDisk: "/dev/nvme0n1"
-      hookRef: "default-captain-amd64"
-      imageRef: "amd64-k8s"
-      extraKernelCommandLine: "console=ttyS0"
-      # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
-      # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
-      userData: |
-        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
-
-    "vm-arm64":
-      enabled: false
-      arch: aarch64
-      mac: "vm-arm64"
-      rootDisk: "/dev/nvme0n1"
-      hookRef: "default-captain-aarch64"
-      imageRef: "arm64-k8s"
-      extraKernelCommandLine: "console=ttyAMA0"
-      ipv4:
-        address: 192.168.66.10 # not true, its just the host running the VM
-      # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
-      # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
-      userData: |
-        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
-
-    "vm01":
-      #namespace: "trixie-capi-demo"
+    "vm01": # x86
       enabled: false
       arch: x86_64
       mac: "52:54:00:01:03:01"
@@ -595,6 +577,27 @@ hardware:
       hookRef: "default-captain-amd64"
       imageRef: "amd64-k8s"
       extraKernelCommandLine: "console=ttyS0"
+      # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
+      # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
+      userData: |
+        #include https://cloud-init.pardini.net/rpardini/oldskool-rpardini/master/base
+
+    "vm02": # arm64 / aarch64
+      enabled: false
+      arch: x86_64
+      mac: "52:54:00:01:03:02"
+      netboot: true
+      uefi: true
+      ipv4:
+        address: 192.168.66.72
+        gateway: "192.168.66.1"
+        netmask: "255.255.255.0"
+        dns: [ "192.168.66.1" ]
+        time_servers: [ "192.168.66.1" ]
+      rootDisk: "/dev/smth-smth-NOT-YET" # prolly not yet...
+      hookRef: "default-captain-aarch64"
+      imageRef: "arm64-k8s"
+      extraKernelCommandLine: "console=ttyAMA0"
       # userData is just standard cloud-init, thus supports #cloud-config and #include etc.
       # Attention: if ever ran, this gives rpardini root access to your machine. Use your own scripts;
       userData: |
