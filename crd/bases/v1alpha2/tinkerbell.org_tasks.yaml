@@ -201,7 +201,7 @@ spec:
 
                   The following Action template string can be used access the reference:
 
-                  {{ .references.config.data.my-key }}
+                  ( .references.config.data.my-key )
                 type: object
               volumes:
                 description: Volumes defined here are added to all Actions in the

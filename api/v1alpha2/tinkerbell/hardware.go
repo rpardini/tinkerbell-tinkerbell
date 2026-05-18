@@ -54,7 +54,7 @@ type HardwareSpec struct {
 
 	// References allow for linking custom resource objects of any kind to this Hardware object.
 	// These are available in Workflows for templating. They are referenced by the name of the reference.
-	// For example, given a reference with the name "lvm", you can access it in a Workflow with {{ .references.lvm }}.
+	// For example, given a reference with the name "lvm", you can access it in a Workflow with ( .references.lvm ).
 	// +optional
 	References *References `json:"references,omitempty"`
 
@@ -110,16 +110,16 @@ type Instance struct {
 	// standard Go templating format, https://pkg.go.dev/text/template.
 	// Always start with ".hardware", then use dot notation to the desired key.
 	//
-	// {{ .hardware.location.to.a.key.in.the.spec }}
+	// ( .hardware.location.to.a.key.in.the.spec )
 	//
 	// For example:
 	// Reference the first ssh key in the list:
-	// {{ .hardware.instance.sshKeys[0] }}
+	// ( .hardware.instance.sshKeys[0] )
 	//
 	// or
 	//
 	// Reference the IPv4 address of a network interface:
-	// {{ (index .hardware.networkInterfaces "52:54:00:41:05:c6").ipam.ipv4.address }}
+	// ( (index .hardware.networkInterfaces "52:54:00:41:05:c6").ipam.ipv4.address )
 	// +optional
 	Metadata *string `json:"metadata,omitempty"`
 
@@ -131,16 +131,16 @@ type Instance struct {
 	// standard Go templating format, https://pkg.go.dev/text/template.
 	// Always start with ".hardware", then use dot notation to the desired key.
 	//
-	// {{ .hardware.location.to.a.key.in.the.spec }}
+	// ( .hardware.location.to.a.key.in.the.spec )
 	//
 	// For example:
 	// Reference the first ssh key in the list:
-	// {{ .hardware.instance.sshKeys[0] }}
+	// ( .hardware.instance.sshKeys[0] )
 	//
 	// or
 	//
 	// Reference the IPv4 address of a network interface:
-	// {{ (index .hardware.networkInterfaces "52:54:00:41:05:c6").ipam.ipv4.address }}
+	// ( (index .hardware.networkInterfaces "52:54:00:41:05:c6").ipam.ipv4.address )
 	// +optional
 	NetworkConfig *string `json:"networkConfig,omitempty"`
 
@@ -159,16 +159,16 @@ type Instance struct {
 	// standard Go templating format, https://pkg.go.dev/text/template.
 	// Always start with ".hardware", then use dot notation to the desired key.
 	//
-	// {{ .hardware.location.to.a.key.in.the.spec }}
+	// ( .hardware.location.to.a.key.in.the.spec )
 	//
 	// For example:
 	// Reference the first ssh key in the list:
-	// {{ .hardware.instance.sshKeys[0] }}
+	// ( .hardware.instance.sshKeys[0] )
 	//
 	// or
 	//
 	// Reference the IPv4 address of a network interface:
-	// {{ (index .hardware.networkInterfaces "52:54:00:41:05:c6").ipam.ipv4.address }}
+	// ( (index .hardware.networkInterfaces "52:54:00:41:05:c6").ipam.ipv4.address )
 	// +optional
 	Userdata *string `json:"userdata,omitempty"`
 
@@ -180,16 +180,16 @@ type Instance struct {
 	// standard Go templating format, https://pkg.go.dev/text/template.
 	// Always start with ".hardware", then use dot notation to the desired key.
 	//
-	// {{ .hardware.location.to.a.key.in.the.spec }}
+	// ( .hardware.location.to.a.key.in.the.spec )
 	//
 	// For example:
 	// Reference the first ssh key in the list:
-	// {{ .hardware.instance.sshKeys[0] }}
+	// ( .hardware.instance.sshKeys[0] )
 	//
 	// or
 	//
 	// Reference the IPv4 address of a network interface:
-	// {{ (index .hardware.networkInterfaces "52:54:00:41:05:c6").ipam.ipv4.address }}
+	// ( (index .hardware.networkInterfaces "52:54:00:41:05:c6").ipam.ipv4.address )
 	// +optional
 	Vendordata *string `json:"vendordata,omitempty"`
 }
