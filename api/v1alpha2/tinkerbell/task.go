@@ -53,7 +53,7 @@ type TaskSpec struct {
 	//
 	// The following Action template string can be used access the reference:
 	//
-	// {{ .references.config.data.my-key }}
+	// ( .references.config.data.my-key )
 	//
 	// +optional
 	References map[string]Reference `json:"references,omitempty"`
