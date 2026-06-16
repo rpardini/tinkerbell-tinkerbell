@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pin/tftp/v3"
-	"github.com/tinkerbell/tinkerbell/smee/internal/hardware"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -26,10 +25,11 @@ type TFTP struct {
 	EnableTFTPSinglePort bool
 	Addr                 netip.AddrPort
 	Timeout              time.Duration
-	Patch                []byte
 	BlockSize            int
-	Backend              hardware.BackendReader
-	AssetDir             string
+	// Router dispatches each TFTP read request through its configured
+	// Routes in order. The caller is responsible for constructing the
+	// Router with the routes it wants to enable.
+	Router Router
 }
 
 // ListenAndServe will listen and serve iPXE binaries over TFTP.
@@ -105,31 +105,12 @@ func (h TFTP) HandleRead(filename string, rf io.ReaderFrom) error {
 
 	req := Request{Filename: full, Base: filepath.Base(shortfile), Client: client}
 
-	emb := EmbeddedIPXERoute{Log: log, Patch: h.Patch}
-	if handled, errEmb := emb.TryServe(ctx, req, rf); handled {
-		return errEmb
+	err = h.Router.Handle(ctx, req, rf)
+	if err != nil {
+		log.Error(err, "request not handled")
+		span.SetStatus(codes.Error, err.Error())
 	}
-
-	pxe := PXELinuxMACRoute{Log: log, Resolver: hardware.BackendResolver{Backend: h.Backend}}
-	if handled, errPxe := pxe.TryServe(ctx, req, rf); handled {
-		return errPxe
-	}
-
-	rpi := RPiNetbootRoute{Log: log, Resolver: hardware.BackendResolver{Backend: h.Backend}, AssetDir: h.AssetDir}
-	if handled, errRpi := rpi.TryServe(ctx, req, rf); handled {
-		return errRpi
-	}
-
-	disk := DiskAssetRoute{Log: log, Dir: h.AssetDir}
-	if handled, errDsk := disk.TryServe(ctx, req, rf); handled {
-		return errDsk
-	}
-
-	// if still not handled, return error; file not found.
-	err404 := fmt.Errorf("file [%v] unknown: %w", filepath.Base(shortfile), os.ErrNotExist)
-	log.Error(err404, "file unknown")
-	span.SetStatus(codes.Error, err404.Error())
-	return err404
+	return err
 }
 
 // HandleWrite handles TFTP PUT requests. It will always return an error. This library does not support PUT.
