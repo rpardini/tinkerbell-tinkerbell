@@ -232,11 +232,18 @@ type IPXE struct {
 	Binary string `json:"binary,omitempty"`
 }
 
-// OSIE configuration.
+// OSIE (Operating System Installation Environment) configuration.
 type OSIE struct {
 	BaseURL string `json:"baseURL,omitempty"`
 	Kernel  string `json:"kernel,omitempty"`
 	Initrd  string `json:"initrd,omitempty"`
+
+	// KernelParams, when defined, overrides the default kernel parameters passed to the kernel
+	// command line when launching the OSIE. Typically they will be in the format "key=value" and
+	// align with the Linux Kernel and OSIE documentation, but they can be any string.
+	// Also used as the source for RaspberryPi-Netboot cmdline.txt (joined with spaces).
+	// +optional
+	KernelParams []string `json:"kernelParams,omitempty"`
 }
 
 // DHCP configuration.

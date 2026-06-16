@@ -231,7 +231,8 @@ spec:
                               type: string
                           type: object
                         osie:
-                          description: OSIE configuration.
+                          description: OSIE (Operating System Installation Environment)
+                            configuration.
                           properties:
                             baseURL:
                               type: string
@@ -239,6 +240,15 @@ spec:
                               type: string
                             kernel:
                               type: string
+                            kernelParams:
+                              description: |-
+                                KernelParams, when defined, overrides the default kernel parameters passed to the kernel
+                                command line when launching the OSIE. Typically they will be in the format "key=value" and
+                                align with the Linux Kernel and OSIE documentation, but they can be any string.
+                                Also used as the source for RaspberryPi-Netboot cmdline.txt (joined with spaces).
+                              items:
+                                type: string
+                              type: array
                           type: object
                         pxelinux:
                           description: |-
