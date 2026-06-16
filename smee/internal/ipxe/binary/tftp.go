@@ -104,11 +104,16 @@ func (h TFTP) HandleRead(filename string, rf io.ReaderFrom) error {
 	)
 	defer span.End()
 
-	req := Request{Filename: shortfile, Base: filepath.Base(shortfile), Client: client}
+	req := Request{Filename: full, Base: filepath.Base(shortfile), Client: client}
 
 	emb := EmbeddedIPXERoute{Log: log, Patch: h.Patch}
 	if handled, errEmb := emb.TryServe(ctx, req, rf); handled {
 		return errEmb
+	}
+
+	pxe := PXELinuxMACRoute{Log: log, Resolver: hardware.BackendResolver{Backend: h.Backend}}
+	if handled, errPxe := pxe.TryServe(ctx, req, rf); handled {
+		return errPxe
 	}
 
 	servedByHardware, errHw := tryServeAssetFromHardware(filename, client, rf, log, full, span, h)
@@ -132,29 +137,9 @@ func (h TFTP) HandleRead(filename string, rf io.ReaderFrom) error {
 }
 
 func tryServeAssetFromHardware(filename string, client net.UDPAddr, rf io.ReaderFrom, log logr.Logger, full string, span trace.Span, tftpServer TFTP) (bool, error) {
-	// pxelinux has a "tell"; it will by default hit the tftp server for "pxelinux.cfg/01-<MAC-ADDRESS-DASHED-UPPER>"
-
-	const pxelinuxFullMACPrefix = "pxelinux.cfg/01-"
-	const pxelinuxFullMACPrefixLen = len(pxelinuxFullMACPrefix)
-	const pxelinuxMacSuffix = "00-00-00-00-00-00"
-	const pxeLinuxMacSuffixLen = len(pxelinuxMacSuffix)
-	const pxeLinuxFullLen = pxelinuxFullMACPrefixLen + pxeLinuxMacSuffixLen
-
-	inputFnLength := len(full)
-
-	// Check if we can parse the MAC out of the rest of the string if it's exactly the expected size
-	if inputFnLength == pxeLinuxFullLen && full[0:pxelinuxFullMACPrefixLen] == pxelinuxFullMACPrefix {
-		log.Info("pxelinux.cfg request matches exact expected format", "full", full)
-		macStr := full[pxelinuxFullMACPrefixLen:]
-		didServe, errHwServe := tryServeAssetFromPXEMacFilename(filename, client, rf, log, full, span, tftpServer.Backend, macStr)
-		if didServe {
-			return didServe, errHwServe
-		}
-	}
-
-	// If not a "pxelinux.cfg/01-<MAC-ADDRESS-DASHED-UPPER>" request, try and get HW by IP.
-	// If a HW found, it might have either RPi-Netboot templates (xxxx/config.txt, xxxx/cmdline.txt), or
-	// a generic path-rewrite eg 'xxxxx/' ->  'captain-armbian-rpi/'.
+	// Try and get HW by IP. If a HW is found, it might have either RPi-Netboot
+	// templates (xxxx/config.txt, xxxx/cmdline.txt), or a generic path-rewrite
+	// eg 'xxxxx/' -> 'captain-armbian-rpi/'.
 	hw, errHwLookupByIP := hardware.GetByIP(context.Background(), client.IP, tftpServer.Backend)
 	if errHwLookupByIP != nil {
 		log.Error(errHwLookupByIP, "failed to get hardware by IP", "client", client)
@@ -187,26 +172,6 @@ func tryServeAssetFromHardware(filename string, client net.UDPAddr, rf io.Reader
 		return true, errDsk
 	}
 
-	return false, nil
-}
-
-func tryServeAssetFromPXEMacFilename(filename string, client net.UDPAddr, rf io.ReaderFrom, log logr.Logger, full string, span trace.Span, backend hardware.BackendReader, macStr string) (bool, error) {
-	log.Info("parsed MAC string from pxelinux.cfg request", "macStr", macStr)
-	hardwareAddr, errMacParse := net.ParseMAC(macStr)
-	if errMacParse != nil {
-		log.Error(errMacParse, "failed to parse MAC from pxelinux.cfg request", "macStr", macStr)
-	} else {
-		log.Info("parsed MAC address from pxelinux.cfg request; looking up in Backend...", "hardwareAddr", hardwareAddr)
-		hw, errHwLookupByMac := hardware.GetByMac(context.Background(), hardwareAddr, backend)
-		if errHwLookupByMac != nil {
-			log.Error(errHwLookupByMac, "failed to get hardware by MAC", "client", client, "full", full, "macStr", macStr, "hardwareAddr", hardwareAddr)
-		} else {
-			didServe, errHwServe := serveFromHardware(filename, log, full, hw, rf, span, hw.PXELINUX.Template)
-			if didServe {
-				return didServe, errHwServe
-			}
-		}
-	}
 	return false, nil
 }
 
