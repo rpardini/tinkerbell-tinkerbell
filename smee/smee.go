@@ -26,6 +26,7 @@ import (
 	"github.com/tinkerbell/tinkerbell/smee/internal/dhcp/handler/proxy"
 	"github.com/tinkerbell/tinkerbell/smee/internal/dhcp/handler/reservation"
 	"github.com/tinkerbell/tinkerbell/smee/internal/dhcp/server"
+	"github.com/tinkerbell/tinkerbell/smee/internal/hardware"
 	"github.com/tinkerbell/tinkerbell/smee/internal/ipxe/binary"
 	"github.com/tinkerbell/tinkerbell/smee/internal/ipxe/script"
 	"github.com/tinkerbell/tinkerbell/smee/internal/iso"
@@ -412,15 +413,22 @@ func (c *Config) Start(ctx context.Context, log logr.Logger) error {
 		if !addrPort.IsValid() {
 			return fmt.Errorf("invalid TFTP bind address: IP: %v, Port: %v", addrPort.Addr(), addrPort.Port())
 		}
+		resolver := hardware.BackendResolver{Backend: c.Backend}
 		tftpHandler := binary.TFTP{
 			Log:                  log,
 			EnableTFTPSinglePort: c.TFTP.SinglePort,
 			Addr:                 addrPort,
 			Timeout:              c.TFTP.Timeout,
-			Patch:                []byte(c.IPXE.EmbeddedScriptPatch),
 			BlockSize:            c.TFTP.BlockSize,
-			AssetDir:             c.TFTP.AssetDir,
-			Backend:              c.Backend,
+			Router: binary.Router{
+				Log: log,
+				Routes: []binary.Route{
+					binary.EmbeddedIPXERoute{Log: log, Patch: []byte(c.IPXE.EmbeddedScriptPatch)},
+					binary.PXELinuxMACRoute{Log: log, Resolver: resolver},
+					binary.RPiNetbootRoute{Log: log, Resolver: resolver, AssetDir: c.TFTP.AssetDir},
+					binary.DiskAssetRoute{Log: log, Dir: c.TFTP.AssetDir},
+				},
+			},
 		}
 
 		log.Info("starting tftp server", "bindAddr", addrPort.String())
