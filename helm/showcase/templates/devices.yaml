@@ -142,14 +142,17 @@ spec:
             initrd ${download-url}/{{ $hookObj.initrd }}
             imgstat
             boot
-        {{- if $dev.piSerialNum }}
-        rpiNetboot:
-          assetRewrite: "{{ $hookObj.imageVolumeID }}/firmware-rpi"
-          piSerialNum: "{{$dev.piSerialNum}}"
-          cmdlineTxtTemplate: |
-            tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{ $dev.metadataInstanceId | default $deviceId }} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} modules=loop,squashfs,sd-mod,usb-storage initrd={{ $hookObj.initrd }} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}
+        {{- if $dev.serialNum }}
+        osie:
+          # KernelParams is the single source of truth for the kernel command line.
+          # Smee renders it as the RPi cmdline.txt response by joining with spaces.
+          kernelParams:
+          - "tink_worker_image={{ $.Values.tinkerbell.tinkWorkerImagePrefix }}{{ $.Values.tinkerbell.tinkWorkerImage }} facility= syslog_host={{ $.Values.tinkerbell.syslogHost }} grpc_authority={{ $.Values.tinkerbell.grpcAuthority }} tinkerbell_tls={{ $.Values.tinkerbell.grpcTLS }} tinkerbell_insecure_tls={{ $.Values.tinkerbell.grpcInsecureTLS }} worker_id={{ $dev.metadataInstanceId | default $deviceId }} hw_addr={{$dev.mac}} {{ if $.Values.tinkerbell.insecureRegistries.enabled }}insecure_registries={{ $.Values.tinkerbell.insecureRegistries.registries }} {{end}} modules=loop,squashfs,sd-mod,usb-storage initrd={{ $hookObj.initrd }} {{$hookObj.kernelCommandLine}} {{ $dev.extraKernelCommandLine }}"
+        rpi:
+          firmwarePath: "{{ $hookObj.imageVolumeID }}/firmware-rpi"
+          serialNum: "{{$dev.serialNum}}"
           # See https://www.raspberrypi.com/documentation/computers/config_txt.html#initramfs
-          configTxtTemplate: |
+          configTxt: |
             sha256=0
             uart_2ndstage=1
             gpu_mem=16
@@ -173,9 +176,9 @@ spec:
         {{- end }}
         {{- if $dev.pxelinux }}
         pxelinux:
-          {{- if $dev.pxelinux.template }}
-          template: |
-            {{- $dev.pxelinux.template | nindent 12 }}
+          {{- if $dev.pxelinux.config }}
+          config: |
+            {{- $dev.pxelinux.config | nindent 12 }}
           {{- else }}
           {{- $fullFdt := "" }}
           {{- $hasFdt := false }}
@@ -183,7 +186,7 @@ spec:
           {{- $hasFdt = true }}
           {{- $fullFdt = printf "%s/%s" $hookObj.dtbDir $dev.pxelinux.fdt }}
           {{- end }}
-          template: |
+          config: |
             default hook
             menu title Tinkerbell Hook for {{$deviceId}} with hook {{$mergedDevice.hookRef}} via PXELinux
             prompt 1
