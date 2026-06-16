@@ -33,7 +33,7 @@ type Info struct {
 	IPXEScriptURL *url.URL
 	OSIE          OSIE
 	PXELINUX      PXELINUX
-	RPiNetboot    RPiNetboot
+	RPI           RPI
 }
 
 // OSIE or OS Installation Environment is the data about where the OSIE parts are located.
@@ -44,19 +44,20 @@ type OSIE struct {
 	Kernel string
 	// Initrd is the name of the initrd file.
 	Initrd string
+	// KernelParams are the kernel command-line parameters; rendered as cmdline.txt for RPi netboot.
+	KernelParams []string
 }
 
-// PXELINUX represents PXELinux template, for u-boot "pxelinux.cfg" booting
+// PXELINUX represents the config used to generate pxelinux.cfg for u-boot booting.
 type PXELINUX struct {
-	Template string `json:"template,omitempty"`
+	Config string `json:"config,omitempty"`
 }
 
-// RPiNetboot represents the data needed to support RPi-Netboot (Pi-specific EEPROM firmware netbooting)
-type RPiNetboot struct {
-	PiSerialNum        string `json:"piSerialNum"`
-	AssetRewrite       string `json:"assetRewrite"`
-	ConfigTxtTemplate  string `json:"configTxtTemplate,omitempty"`
-	CmdlineTxtTemplate string `json:"cmdlineTxtTemplate,omitempty"`
+// RPI represents the data needed to support RaspberryPi EEPROM firmware netbooting.
+type RPI struct {
+	SerialNum    string `json:"serialNum"`
+	FirmwarePath string `json:"firmwarePath,omitempty"`
+	ConfigTxt    string `json:"configTxt,omitempty"`
 }
 
 // GetByMac uses the BackendReader to get the hardware data by MAC address and
@@ -95,7 +96,7 @@ func GetByMac(ctx context.Context, mac net.HardwareAddr, br BackendReader) (Info
 		IPXEScriptURL: n.IPXEScriptURL,
 		OSIE:          OSIE(n.OSIE),
 		PXELINUX:      PXELINUX(n.PXELINUX),
-		RPiNetboot:    RPiNetboot(n.RPiNetboot),
+		RPI:           RPI(n.RPI),
 	}, nil
 }
 
@@ -134,6 +135,6 @@ func GetByIP(ctx context.Context, ip net.IP, br BackendReader) (Info, error) {
 		IPXEScriptURL: n.IPXEScriptURL,
 		OSIE:          OSIE(n.OSIE),
 		PXELINUX:      PXELINUX(n.PXELINUX),
-		RPiNetboot:    RPiNetboot(n.RPiNetboot),
+		RPI:           RPI(n.RPI),
 	}, nil
 }
