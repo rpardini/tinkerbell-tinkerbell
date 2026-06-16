@@ -55,7 +55,7 @@ type Netboot struct {
 	Facility      string
 	OSIE          OSIE
 	PXELINUX      PXELINUX
-	RPiNetboot    RPiNetboot
+	RPI           RPI
 }
 
 // Isoboot holds info used in booting a client using an ISO image.
@@ -66,17 +66,16 @@ type Isoboot struct {
 	SourceISO *url.URL
 }
 
-// PXELINUX represents PXELinux template, for u-boot "pxelinux.cfg" booting
+// PXELINUX represents the config, for u-boot "pxelinux.cfg" booting.
 type PXELINUX struct {
-	Template string `json:"template,omitempty"`
+	Config string `json:"config,omitempty"`
 }
 
-// RPiNetboot represents the data needed to support RPi-Netboot (Pi-specific EEPROM firmware netbooting)
-type RPiNetboot struct {
-	PiSerialNum        string `json:"piSerialNum"`
-	AssetRewrite       string `json:"assetRewrite"`
-	ConfigTxtTemplate  string `json:"configTxtTemplate,omitempty"`
-	CmdlineTxtTemplate string `json:"cmdlineTxtTemplate,omitempty"`
+// RPI represents the data needed to support RaspberryPi EEPROM firmware netbooting.
+type RPI struct {
+	SerialNum    string `json:"serialNum"`
+	FirmwarePath string `json:"firmwarePath,omitempty"`
+	ConfigTxt    string `json:"configTxt,omitempty"`
 }
 
 // OSIE or OS Installation Environment is the data about where the OSIE parts are located.
@@ -87,6 +86,8 @@ type OSIE struct {
 	Kernel string
 	// Initrd is the name of the initrd file.
 	Initrd string
+	// KernelParams are the kernel command-line parameters; rendered as cmdline.txt for RPi netboot.
+	KernelParams []string
 }
 
 // EncodeToAttributes returns a slice of opentelemetry attributes that can be used to set span.SetAttributes.
