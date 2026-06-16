@@ -196,7 +196,7 @@ func TestPXELinuxMACRoute(t *testing.T) {
 		"valid path, template served": {
 			filename: "pxelinux.cfg/01-" + dashed,
 			resolver: &fakeResolver{byMAC: map[string]hardware.Info{
-				mac.String(): {PXELINUX: hardware.PXELINUX{Template: "PROMPT 0\nDEFAULT linux"}},
+				mac.String(): {PXELINUX: hardware.PXELINUX{Config: "PROMPT 0\nDEFAULT linux"}},
 			}},
 			wantHandled:    true,
 			wantBytesMatch: "PROMPT 0\nDEFAULT linux",
@@ -224,7 +224,7 @@ func TestPXELinuxMACRoute(t *testing.T) {
 		"empty template passes through": {
 			filename: "pxelinux.cfg/01-" + dashed,
 			resolver: &fakeResolver{byMAC: map[string]hardware.Info{
-				mac.String(): {PXELINUX: hardware.PXELINUX{Template: ""}},
+				mac.String(): {PXELINUX: hardware.PXELINUX{Config: ""}},
 			}},
 			wantHandled: false,
 		},
@@ -258,11 +258,13 @@ func TestRPiNetbootRoute(t *testing.T) {
 	const rewrite = "rpi4b"
 
 	hwWithRPi := hardware.Info{
-		RPiNetboot: hardware.RPiNetboot{
-			PiSerialNum:        serial,
-			AssetRewrite:       rewrite,
-			ConfigTxtTemplate:  "config-txt-body",
-			CmdlineTxtTemplate: "cmdline-txt-body",
+		RPI: hardware.RPI{
+			SerialNum:    serial,
+			FirmwarePath: rewrite,
+			ConfigTxt:    "config-txt-body",
+		},
+		OSIE: hardware.OSIE{
+			KernelParams: []string{"console=tty1", "rw"},
 		},
 	}
 
@@ -309,19 +311,28 @@ func TestRPiNetbootRoute(t *testing.T) {
 			resolver:    &fakeResolver{byIP: map[string]hardware.Info{clientIP.String(): hwWithRPi}},
 			wantHandled: false,
 		},
-		"config.txt served from template": {
+		"config.txt served from ConfigTxt": {
 			filename:    serial + "/config.txt",
 			assetDir:    assetDir,
 			resolver:    &fakeResolver{byIP: map[string]hardware.Info{clientIP.String(): hwWithRPi}},
 			wantHandled: true,
 			wantBody:    "config-txt-body",
 		},
-		"cmdline.txt served from template": {
+		"cmdline.txt served from joined OSIE.KernelParams": {
 			filename:    serial + "/cmdline.txt",
 			assetDir:    assetDir,
 			resolver:    &fakeResolver{byIP: map[string]hardware.Info{clientIP.String(): hwWithRPi}},
 			wantHandled: true,
-			wantBody:    "cmdline-txt-body",
+			wantBody:    "console=tty1 rw",
+		},
+		"empty KernelParams cmdline.txt passes through": {
+			filename: serial + "/cmdline.txt",
+			assetDir: assetDir,
+			resolver: &fakeResolver{byIP: map[string]hardware.Info{clientIP.String(): {
+				RPI: hardware.RPI{SerialNum: serial, FirmwarePath: rewrite},
+				// no KernelParams
+			}}},
+			wantHandled: false,
 		},
 		"other file rewritten and served from disk": {
 			filename:    serial + "/start.elf",
