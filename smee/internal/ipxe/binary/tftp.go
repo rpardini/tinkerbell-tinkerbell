@@ -1,7 +1,6 @@
 package binary
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -116,9 +115,9 @@ func (h TFTP) HandleRead(filename string, rf io.ReaderFrom) error {
 		return errPxe
 	}
 
-	servedByHardware, errHw := tryServeAssetFromHardware(filename, client, rf, log, full, span, h)
-	if servedByHardware {
-		return errHw
+	rpi := RPiNetbootRoute{Log: log, Resolver: hardware.BackendResolver{Backend: h.Backend}, AssetDir: h.AssetDir}
+	if handled, errRpi := rpi.TryServe(ctx, req, rf); handled {
+		return errRpi
 	}
 
 	// if AssetDir is set, stream the file directly from disk if found.
@@ -134,63 +133,6 @@ func (h TFTP) HandleRead(filename string, rf io.ReaderFrom) error {
 	log.Error(err404, "file unknown")
 	span.SetStatus(codes.Error, err404.Error())
 	return err404
-}
-
-func tryServeAssetFromHardware(filename string, client net.UDPAddr, rf io.ReaderFrom, log logr.Logger, full string, span trace.Span, tftpServer TFTP) (bool, error) {
-	// Try and get HW by IP. If a HW is found, it might have either RPi-Netboot
-	// templates (xxxx/config.txt, xxxx/cmdline.txt), or a generic path-rewrite
-	// eg 'xxxxx/' -> 'captain-armbian-rpi/'.
-	hw, errHwLookupByIP := hardware.GetByIP(context.Background(), client.IP, tftpServer.Backend)
-	if errHwLookupByIP != nil {
-		log.Error(errHwLookupByIP, "failed to get hardware by IP", "client", client)
-		return false, nil
-	}
-	log.Info("got tftp request for hardware via IP", "full", full, "hardware", hw)
-
-	// RPiNetboot
-	if hw.RPiNetboot.PiSerialNum == "" || hw.RPiNetboot.AssetRewrite == "" || tftpServer.AssetDir == "" {
-		log.Info("hardware does not have RPiNetboot data; skipping RPiNetboot checks", "full", full, "hardware", hw)
-		return false, nil
-	}
-
-	log.Info("hardware has RPiNetboot data; checking if request is for config.txt or cmdline.txt", "full", full)
-	switch full {
-	case hw.RPiNetboot.PiSerialNum + "/config.txt":
-		log.Info("request is for config.txt; serving RPiNetboot ConfigTxtTemplate", "full", full)
-		return serveFromHardware(filename, log, full, hw, rf, span, hw.RPiNetboot.ConfigTxtTemplate)
-	case hw.RPiNetboot.PiSerialNum + "/cmdline.txt":
-		log.Info("request is for cmdline.txt; serving RPiNetboot CmdlineTxtTemplate", "full", full)
-		return serveFromHardware(filename, log, full, hw, rf, span, hw.RPiNetboot.CmdlineTxtTemplate)
-	}
-	log.Info("request is not for a known RPiNetboot file (config.txt or cmdline.txt); will try generic serve and asset dir next", "full", full)
-
-	// rewrite the "full uri" by replacing the PiSerialNum prefix with the AssetRewrite value
-	rewrittenFull := hw.RPiNetboot.AssetRewrite + full[len(hw.RPiNetboot.PiSerialNum):]
-	log.Info("rewritten filename for asset dir lookup", "full", full, "rewrittenFull", rewrittenFull)
-	servedFromDisk, errDsk := tryServeAssetFromDisk(filename, rf, tftpServer, rewrittenFull, log, span)
-	if servedFromDisk {
-		return true, errDsk
-	}
-
-	return false, nil
-}
-
-func serveFromHardware(filename string, log logr.Logger, full string, hw hardware.Info, rf io.ReaderFrom, span trace.Span, template string) (bool, error) {
-	// got a hardware, serve it  from there
-	log.Info("got tftp request for hardware", "full", full, "hardware", hw)
-	if template == "" {
-		log.Info("no template found in hardware; cannot serve", "full", full, "hardware", hw)
-		return false, nil // Not served, empty template, "next!"
-	}
-	// do actual templating here one day
-	bytesSent, err := rf.ReadFrom(bytes.NewReader([]byte(template)))
-	if err != nil {
-		log.Error(err, "serving from template in hardware failed", "bytesSent", bytesSent, "contentSize", len([]byte(template)))
-		return true, err // tried & failed to serve
-	}
-	log.Info("file served from hardware", "bytesSent", bytesSent)
-	span.SetStatus(codes.Ok, filename)
-	return true, nil // tried & served OK
 }
 
 func tryServeAssetFromDisk(filename string, rf io.ReaderFrom, h TFTP, full string, log logr.Logger, span trace.Span) (bool, error) {
