@@ -555,7 +555,7 @@ hardware:
       mac: "rpi"
       rootDisk: "/dev/disk/by-id/ata-2105_naa.5000000000000001"
       hookRef: "captain-armbian-rpi"
-      piSerialNum: "wrongPiSerialNum" # 8 bytes. @TODO how to obtain it? UART?
+      serialNum: "wrongSerialNum" # 8 bytes. @TODO how to obtain it? UART?
       imageRef: "rpi4b-k8s"
       extraKernelCommandLine: "console=tty1 console=ttyAMA0,115200 loglevel=7" # Last console defined "wins", thus use tty1 last if no serial console
       userData: |
