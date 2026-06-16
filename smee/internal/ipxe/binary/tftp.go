@@ -120,12 +120,9 @@ func (h TFTP) HandleRead(filename string, rf io.ReaderFrom) error {
 		return errRpi
 	}
 
-	// if AssetDir is set, stream the file directly from disk if found.
-	if h.AssetDir != "" {
-		servedFromDisk, errDsk := tryServeAssetFromDisk(filename, rf, h, full, log, span)
-		if servedFromDisk {
-			return errDsk
-		}
+	disk := DiskAssetRoute{Log: log, Dir: h.AssetDir}
+	if handled, errDsk := disk.TryServe(ctx, req, rf); handled {
+		return errDsk
 	}
 
 	// if still not handled, return error; file not found.
@@ -133,37 +130,6 @@ func (h TFTP) HandleRead(filename string, rf io.ReaderFrom) error {
 	log.Error(err404, "file unknown")
 	span.SetStatus(codes.Error, err404.Error())
 	return err404
-}
-
-func tryServeAssetFromDisk(filename string, rf io.ReaderFrom, h TFTP, full string, log logr.Logger, span trace.Span) (bool, error) {
-	// Join the h.AssetDir with the full requested path ("full") in a secure way; prevent path traversal
-	assetPath := filepath.Join(h.AssetDir, full)
-	log.Info("attempting to load file from asset dir", "assetPath", assetPath, "assetDir", h.AssetDir)
-
-	file, err := os.Open(assetPath)
-	if err != nil {
-		log.Error(err, "failed to read file from asset dir", "assetPath", assetPath)
-		return false, nil
-	}
-
-	defer func() {
-		if cerr := file.Close(); cerr != nil {
-			log.Error(cerr, "failed to close file", "assetPath", assetPath)
-		}
-	}()
-
-	log.Info("streaming file directly from asset dir", "assetPath", assetPath)
-
-	bytesSent, err := rf.ReadFrom(file)
-	if err != nil {
-		log.Error(err, "file serve failed", "bytesSent", bytesSent)
-		span.SetStatus(codes.Error, err.Error())
-		return true, err
-	}
-
-	log.Info("file served from disk", "bytesSent", bytesSent)
-	span.SetStatus(codes.Ok, filename)
-	return true, nil
 }
 
 // HandleWrite handles TFTP PUT requests. It will always return an error. This library does not support PUT.
