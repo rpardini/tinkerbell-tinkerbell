@@ -56,19 +56,19 @@ func (r PXELinuxMACRoute) TryServe(ctx context.Context, req Request, w io.Reader
 		return false, nil
 	}
 
-	if hw.PXELINUX.Template == "" {
-		log.Info("no PXELINUX template in hardware; skipping", "mac", mac.String())
+	if hw.PXELINUX.Config == "" {
+		log.Info("no PXELINUX config in hardware; skipping", "mac", mac.String())
 		return false, nil
 	}
 
-	bytesSent, err := w.ReadFrom(bytes.NewReader([]byte(hw.PXELINUX.Template)))
+	bytesSent, err := w.ReadFrom(bytes.NewReader([]byte(hw.PXELINUX.Config)))
 	if err != nil {
-		log.Error(err, "serving PXELINUX template failed", "bytesSent", bytesSent)
+		log.Error(err, "serving PXELINUX config failed", "bytesSent", bytesSent)
 		span.SetStatus(codes.Error, err.Error())
 		return true, err
 	}
 
-	log.Info("PXELINUX template served", "bytesSent", bytesSent)
+	log.Info("PXELINUX config served", "bytesSent", bytesSent)
 	span.SetStatus(codes.Ok, req.Filename)
 	return true, nil
 }
