@@ -15,7 +15,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pin/tftp/v3"
 	"github.com/tinkerbell/tinkerbell/smee/internal/hardware"
-	binary "github.com/tinkerbell/tinkerbell/smee/internal/ipxe/binary/file"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -105,47 +104,31 @@ func (h TFTP) HandleRead(filename string, rf io.ReaderFrom) error {
 	)
 	defer span.End()
 
-	content, handledByBinary := binary.Files[filepath.Base(shortfile)]
-	if !handledByBinary {
-		servedByHardware, errHw := tryServeAssetFromHardware(filename, client, rf, log, full, span, h)
-		if servedByHardware {
-			return errHw
+	req := Request{Filename: shortfile, Base: filepath.Base(shortfile), Client: client}
+
+	emb := EmbeddedIPXERoute{Log: log, Patch: h.Patch}
+	if handled, errEmb := emb.TryServe(ctx, req, rf); handled {
+		return errEmb
+	}
+
+	servedByHardware, errHw := tryServeAssetFromHardware(filename, client, rf, log, full, span, h)
+	if servedByHardware {
+		return errHw
+	}
+
+	// if AssetDir is set, stream the file directly from disk if found.
+	if h.AssetDir != "" {
+		servedFromDisk, errDsk := tryServeAssetFromDisk(filename, rf, h, full, log, span)
+		if servedFromDisk {
+			return errDsk
 		}
-
-		// if AssetDir is set, stream the file directly from disk if found.
-		if h.AssetDir != "" {
-			servedFromDisk, errDsk := tryServeAssetFromDisk(filename, rf, h, full, log, span)
-			if servedFromDisk {
-				return errDsk
-			}
-		}
-
-		// if still not handled, return error; file not found. otherwise proceed to patch and serve.
-		err404 := fmt.Errorf("file [%v] unknown: %w", filepath.Base(shortfile), os.ErrNotExist)
-		log.Error(err404, "file unknown")
-		span.SetStatus(codes.Error, err404.Error())
-		return err404
 	}
 
-	content, err = binary.Patch(content, h.Patch)
-	if err != nil {
-		log.Error(err, "failed to patch binary")
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-
-	ct := bytes.NewReader(content)
-	b, err := rf.ReadFrom(ct)
-	if err != nil {
-		log.Error(err, "file serve failed", "b", b, "contentSize", len(content))
-		span.SetStatus(codes.Error, err.Error())
-
-		return err
-	}
-	log.Info("file served", "bytesSent", b, "contentSize", len(content))
-	span.SetStatus(codes.Ok, filename)
-
-	return nil
+	// if still not handled, return error; file not found.
+	err404 := fmt.Errorf("file [%v] unknown: %w", filepath.Base(shortfile), os.ErrNotExist)
+	log.Error(err404, "file unknown")
+	span.SetStatus(codes.Error, err404.Error())
+	return err404
 }
 
 func tryServeAssetFromHardware(filename string, client net.UDPAddr, rf io.ReaderFrom, log logr.Logger, full string, span trace.Span, tftpServer TFTP) (bool, error) {
