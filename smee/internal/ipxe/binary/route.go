@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"path/filepath"
 
 	"github.com/go-logr/logr"
 )
@@ -19,15 +18,6 @@ type Request struct {
 	Filename string
 	Base     string
 	Client   net.UDPAddr
-}
-
-// NewRequest builds a Request from the raw TFTP filename and client address.
-func NewRequest(filename string, client net.UDPAddr) Request {
-	return Request{
-		Filename: filename,
-		Base:     filepath.Base(filename),
-		Client:   client,
-	}
 }
 
 // Route is one step in the TFTP read-dispatch chain.
