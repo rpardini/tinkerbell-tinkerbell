@@ -15,18 +15,18 @@ import (
 )
 
 // RPiNetbootRoute handles RaspberryPi EEPROM netboot, which addresses by
-// serial number rather than MAC: requests arrive as "<PiSerialNum>/<file>"
+// serial number rather than MAC: requests arrive as "<SerialNum>/<file>"
 // from the client identified by IP.
 //
 // The route:
 //   - Looks up Hardware by req.Client.IP.
-//   - If the Hardware has RPiNetboot.PiSerialNum and AssetRewrite set and
-//     AssetDir is configured, and req.Filename starts with "<PiSerialNum>/",
-//     either renders an inline template (for config.txt / cmdline.txt) or
-//     rewrites the path's serial prefix to AssetRewrite and streams the
-//     file from AssetDir.
+//   - If the Hardware has RPI.SerialNum and FirmwarePath set and AssetDir
+//     is configured, and req.Filename starts with "<SerialNum>/", either
+//     serves an inline value (RPI.ConfigTxt for config.txt; the joined
+//     OSIE.KernelParams for cmdline.txt) or rewrites the path's serial
+//     prefix to FirmwarePath and streams the file from AssetDir.
 //
-// Returns handled=false when there's no Hardware match, no RPi config on
+// Returns handled=false when there's no Hardware match, no RPI config on
 // the Hardware, no AssetDir, the path doesn't have the serial prefix, or
 // the rewritten on-disk file does not exist.
 type RPiNetbootRoute struct {
@@ -50,27 +50,28 @@ func (r RPiNetbootRoute) TryServe(ctx context.Context, req Request, w io.ReaderF
 		return false, nil
 	}
 
-	rpi := hw.RPiNetboot
-	if rpi.PiSerialNum == "" || rpi.AssetRewrite == "" {
-		log.Info("hardware does not have RPiNetboot data; skipping")
+	rpi := hw.RPI
+	if rpi.SerialNum == "" || rpi.FirmwarePath == "" {
+		log.Info("hardware does not have RPI data; skipping")
 		return false, nil
 	}
 
-	if !strings.HasPrefix(req.Filename, rpi.PiSerialNum+"/") {
-		log.Info("request path does not begin with PiSerialNum; skipping", "piSerialNum", rpi.PiSerialNum)
+	if !strings.HasPrefix(req.Filename, rpi.SerialNum+"/") {
+		log.Info("request path does not begin with SerialNum; skipping", "serialNum", rpi.SerialNum)
 		return false, nil
 	}
 
 	switch req.Filename {
-	case rpi.PiSerialNum + "/config.txt":
-		log.Info("serving RPiNetboot ConfigTxtTemplate")
-		return serveTemplate(w, log, span, req.Filename, rpi.ConfigTxtTemplate)
-	case rpi.PiSerialNum + "/cmdline.txt":
-		log.Info("serving RPiNetboot CmdlineTxtTemplate")
-		return serveTemplate(w, log, span, req.Filename, rpi.CmdlineTxtTemplate)
+	case rpi.SerialNum + "/config.txt":
+		log.Info("serving RPI ConfigTxt")
+		return serveTemplate(w, log, span, req.Filename, rpi.ConfigTxt)
+	case rpi.SerialNum + "/cmdline.txt":
+		cmdline := strings.Join(hw.OSIE.KernelParams, " ")
+		log.Info("serving cmdline.txt from OSIE.KernelParams", "params", hw.OSIE.KernelParams)
+		return serveTemplate(w, log, span, req.Filename, cmdline)
 	}
 
-	rewritten := rpi.AssetRewrite + req.Filename[len(rpi.PiSerialNum):]
+	rewritten := rpi.FirmwarePath + req.Filename[len(rpi.SerialNum):]
 	assetPath := filepath.Join(r.AssetDir, rewritten)
 	log.Info("attempting to load rewritten file from asset dir", "rewritten", rewritten, "assetPath", assetPath)
 
