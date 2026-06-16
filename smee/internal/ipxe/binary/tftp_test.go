@@ -78,11 +78,11 @@ func (s *stubRoute) TryServe(_ context.Context, _ Request, _ io.ReaderFrom) (boo
 func TestRouter(t *testing.T) {
 	errBoom := errors.New("boom")
 	tests := map[string]struct {
-		routes      []*stubRoute
-		wantCalled  []bool
-		wantErr     bool
-		wantErrIs   error
-		wantNotFnd  bool // expect os.ErrNotExist wrap
+		routes     []*stubRoute
+		wantCalled []bool
+		wantErr    bool
+		wantErrIs  error
+		wantNotFnd bool // expect os.ErrNotExist wrap
 	}{
 		"first route handles → later routes skipped": {
 			routes: []*stubRoute{
