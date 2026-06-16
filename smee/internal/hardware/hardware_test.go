@@ -21,8 +21,9 @@ func (m *mockBackend) FilterHardware(_ context.Context, _ data.HardwareFilter) (
 }
 
 // validHardware returns a minimal tinkerbell.Hardware with one interface that
-// has both DHCP and Netboot set, optionally with PXELINUX and RPiNetboot fields.
-func validHardware(mac, ip string, allowPXE bool, pxelinuxTemplate, rpiSerial string) *tinkerbell.Hardware {
+// has both DHCP and Netboot set, optionally with PXELINUX and RPI fields and
+// an OSIE.KernelParams list.
+func validHardware(mac, ip string, allowPXE bool, pxelinuxConfig, rpiSerial string, kernelParams []string) *tinkerbell.Hardware {
 	return &tinkerbell.Hardware{
 		Spec: tinkerbell.HardwareSpec{
 			Interfaces: []tinkerbell.Interface{
@@ -38,10 +39,11 @@ func validHardware(mac, ip string, allowPXE bool, pxelinuxTemplate, rpiSerial st
 					},
 					Netboot: &tinkerbell.Netboot{
 						AllowPXE: &allowPXE,
-						PXELINUX: &tinkerbell.PXELINUX{Template: pxelinuxTemplate},
-						RPiNetboot: &tinkerbell.RPiNetboot{
-							PiSerialNum:  rpiSerial,
-							AssetRewrite: "rpi4",
+						OSIE:     &tinkerbell.OSIE{KernelParams: kernelParams},
+						PXELINUX: &tinkerbell.PXELINUX{Config: pxelinuxConfig},
+						RPI: &tinkerbell.RPI{
+							SerialNum:    rpiSerial,
+							FirmwarePath: "rpi4",
 						},
 					},
 				},
@@ -55,10 +57,11 @@ func TestGetByMac(t *testing.T) {
 	mac := net.HardwareAddr{0x01, 0x02, 0x03, 0x04, 0x05, 0x06}
 
 	tests := map[string]struct {
-		backend       BackendReader
-		wantErr       bool
-		wantTemplate  string
-		wantRPiSerial string
+		backend          BackendReader
+		wantErr          bool
+		wantConfig       string
+		wantRPiSerial    string
+		wantKernelParams []string
 	}{
 		"nil backend": {
 			backend: nil,
@@ -68,12 +71,13 @@ func TestGetByMac(t *testing.T) {
 			backend: &mockBackend{err: errBackend},
 			wantErr: true,
 		},
-		"success populates PXELINUX and RPiNetboot": {
+		"success populates PXELINUX, RPI and OSIE.KernelParams": {
 			backend: &mockBackend{
-				hw: validHardware(mac.String(), "192.168.1.100", true, "default linux kernel append", "abc123"),
+				hw: validHardware(mac.String(), "192.168.1.100", true, "default linux kernel append", "abc123", []string{"console=tty1", "rw"}),
 			},
-			wantTemplate:  "default linux kernel append",
-			wantRPiSerial: "abc123",
+			wantConfig:       "default linux kernel append",
+			wantRPiSerial:    "abc123",
+			wantKernelParams: []string{"console=tty1", "rw"},
 		},
 	}
 
@@ -89,11 +93,14 @@ func TestGetByMac(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(info.PXELINUX.Template, tt.wantTemplate); diff != "" {
-				t.Fatalf("PXELINUX.Template mismatch: %s", diff)
+			if diff := cmp.Diff(info.PXELINUX.Config, tt.wantConfig); diff != "" {
+				t.Fatalf("PXELINUX.Config mismatch: %s", diff)
 			}
-			if diff := cmp.Diff(info.RPiNetboot.PiSerialNum, tt.wantRPiSerial); diff != "" {
-				t.Fatalf("RPiNetboot.PiSerialNum mismatch: %s", diff)
+			if diff := cmp.Diff(info.RPI.SerialNum, tt.wantRPiSerial); diff != "" {
+				t.Fatalf("RPI.SerialNum mismatch: %s", diff)
+			}
+			if diff := cmp.Diff(info.OSIE.KernelParams, tt.wantKernelParams); diff != "" {
+				t.Fatalf("OSIE.KernelParams mismatch: %s", diff)
 			}
 		})
 	}
@@ -104,10 +111,11 @@ func TestGetByIP(t *testing.T) {
 	ip := net.ParseIP("192.168.1.100")
 
 	tests := map[string]struct {
-		backend       BackendReader
-		wantErr       bool
-		wantTemplate  string
-		wantRPiSerial string
+		backend          BackendReader
+		wantErr          bool
+		wantConfig       string
+		wantRPiSerial    string
+		wantKernelParams []string
 	}{
 		"nil backend": {
 			backend: nil,
@@ -117,12 +125,13 @@ func TestGetByIP(t *testing.T) {
 			backend: &mockBackend{err: errBackend},
 			wantErr: true,
 		},
-		"success populates PXELINUX and RPiNetboot": {
+		"success populates PXELINUX, RPI and OSIE.KernelParams": {
 			backend: &mockBackend{
-				hw: validHardware("01:02:03:04:05:06", ip.String(), true, "cmdline overrides", "serial42"),
+				hw: validHardware("01:02:03:04:05:06", ip.String(), true, "cmdline overrides", "serial42", []string{"quiet"}),
 			},
-			wantTemplate:  "cmdline overrides",
-			wantRPiSerial: "serial42",
+			wantConfig:       "cmdline overrides",
+			wantRPiSerial:    "serial42",
+			wantKernelParams: []string{"quiet"},
 		},
 	}
 
@@ -138,11 +147,14 @@ func TestGetByIP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(info.PXELINUX.Template, tt.wantTemplate); diff != "" {
-				t.Fatalf("PXELINUX.Template mismatch: %s", diff)
+			if diff := cmp.Diff(info.PXELINUX.Config, tt.wantConfig); diff != "" {
+				t.Fatalf("PXELINUX.Config mismatch: %s", diff)
 			}
-			if diff := cmp.Diff(info.RPiNetboot.PiSerialNum, tt.wantRPiSerial); diff != "" {
-				t.Fatalf("RPiNetboot.PiSerialNum mismatch: %s", diff)
+			if diff := cmp.Diff(info.RPI.SerialNum, tt.wantRPiSerial); diff != "" {
+				t.Fatalf("RPI.SerialNum mismatch: %s", diff)
+			}
+			if diff := cmp.Diff(info.OSIE.KernelParams, tt.wantKernelParams); diff != "" {
+				t.Fatalf("OSIE.KernelParams mismatch: %s", diff)
 			}
 		})
 	}
@@ -152,7 +164,7 @@ func TestBackendResolver(t *testing.T) {
 	mac := net.HardwareAddr{0x01, 0x02, 0x03, 0x04, 0x05, 0x06}
 	ip := net.ParseIP("192.168.1.100")
 	be := &mockBackend{
-		hw: validHardware(mac.String(), ip.String(), true, "tmpl", "serial1"),
+		hw: validHardware(mac.String(), ip.String(), true, "tmpl", "serial1", nil),
 	}
 	r := BackendResolver{Backend: be}
 
@@ -161,8 +173,8 @@ func TestBackendResolver(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if info.PXELINUX.Template != "tmpl" {
-			t.Fatalf("unexpected template: %q", info.PXELINUX.Template)
+		if info.PXELINUX.Config != "tmpl" {
+			t.Fatalf("unexpected config: %q", info.PXELINUX.Config)
 		}
 	})
 
@@ -171,8 +183,8 @@ func TestBackendResolver(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if info.RPiNetboot.PiSerialNum != "serial1" {
-			t.Fatalf("unexpected serial: %q", info.RPiNetboot.PiSerialNum)
+		if info.RPI.SerialNum != "serial1" {
+			t.Fatalf("unexpected serial: %q", info.RPI.SerialNum)
 		}
 	})
 }
