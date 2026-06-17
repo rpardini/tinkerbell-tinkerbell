@@ -10,10 +10,20 @@ ifeq ($(shell uname), Darwin)
   ifeq ($(shell expr $(MAKE_VERSION) \< 4), 1)
     $(error "GNU Make 4.x is required (Current version: $(MAKE_VERSION)) Install it via Homebrew with 'brew install make' and use 'gmake' instead of 'make'.")
   endif
+  # On macOS the user typically invokes this Makefile via `gmake`, but recipes
+  # (and the shell scripts they call, e.g. ci-checks.sh) shell out to a bare
+  # `make`, which resolves to /usr/bin/make (BSD 3.81) and trips the version
+  # check above. Install a PATH-front shim that points `make` at the same
+  # binary that's currently running, so recursive `make` invocations Just Work.
+  MAKE_SHIM_DIR := $(CURDIR)/out/.make-shim
+  $(shell mkdir -p $(MAKE_SHIM_DIR) && ln -sf $$(command -v $(MAKE)) $(MAKE_SHIM_DIR)/make)
   ifneq ($(shell command -v brew 2>/dev/null), "")
     HOMEBREW_PREFIX := $(shell brew --prefix)
-    PATH := $(HOMEBREW_PREFIX)/opt/coreutils/libexec/gnubin:$(HOMEBREW_PREFIX)/opt/gnu-sed/libexec/gnubin:$(HOMEBREW_PREFIX)/opt/gnu-tar/libexec/gnubin:$(HOMEBREW_PREFIX)/opt/findutils/libexec/gnubin:$(PATH)
+    PATH := $(MAKE_SHIM_DIR):$(HOMEBREW_PREFIX)/opt/coreutils/libexec/gnubin:$(HOMEBREW_PREFIX)/opt/gnu-sed/libexec/gnubin:$(HOMEBREW_PREFIX)/opt/gnu-tar/libexec/gnubin:$(HOMEBREW_PREFIX)/opt/findutils/libexec/gnubin:$(PATH)
+  else
+    PATH := $(MAKE_SHIM_DIR):$(PATH)
   endif
+  export PATH
 endif
 
 GIT_TAG := $(shell git describe --tags --exact-match 2>/dev/null || true)
