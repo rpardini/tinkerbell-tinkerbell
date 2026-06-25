@@ -286,6 +286,7 @@ require (
 )
 
 replace (
+	github.com/jaypipes/ghw => github.com/rpardini/jaypipes-ghw v0.0.0-20260625123836-7ae6181d51a9
 	github.com/tinkerbell/tinkerbell/api => ./api
 	k8s.io/api => k8s.io/api v0.35.5
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.35.5
