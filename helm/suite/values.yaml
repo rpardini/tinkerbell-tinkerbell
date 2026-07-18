@@ -50,6 +50,8 @@ tinkerbell:
         tftpServerEnabled: true # false to use some external tftp
         tftpSinglePort: false # use multiple ports for much faster tftp (we're in hostNetwork mode anyway)
         tftpAssetDir: "/opt/hook" # See volumes & volumeMounts below; needs to match hostPath; requires a nodeSelector
+        pxeHttpEnabled: true # serve pxelinux.cfg and the TFTP asset dir over HTTP (for u-boot pxe-over-http)
+        pxeHttpPathPrefix: "/tftp/" # URL path prefix to serve pxelinux.cfg and TFTP assets under over HTTP
     volumes:
       - name: hook-artifacts
         hostPath: # requires a nodeSelector
