@@ -6,6 +6,10 @@
 # Device enabled: {{$deviceId}}
 {{- $common := $.Values.hardware.common }}
 {{- $mergedDevice := merge $dev $common }}
+# Resolve crippleBoot default (true = fall back to PXE on reboot). NB: don't use Helm 'default', it treats false as empty.
+{{- $crippleBoot := true }}
+{{- if hasKey $mergedDevice "crippleBoot" }}{{- $crippleBoot = $mergedDevice.crippleBoot }}{{- end }}
+# crippleBoot for {{$deviceId}}: {{$crippleBoot}}
 # Getting hook from hookRef: '{{$mergedDevice.hookRef}}'
 {{- if not $mergedDevice.hookRef }}{{- fail (printf "Device '%s', hookRef '%s': %s" $deviceId $mergedDevice.hookRef "hookRef unset?") }}{{- end }}
 
@@ -243,6 +247,19 @@ spec:
               COMPRESSED: false # cos {{ $imageObj.conversion }}
               {{- end }}
               {{- end }}
+
+          - name: "write-cripple-boot-marker"
+            image: {{ $.Values.actions.repository }}/writefile:{{ $.Values.actions.version }}
+            timeout: 90
+            environment:
+              DEST_DISK: {{$rootDiskRootfsPartitionDevice}}
+              FS_TYPE: ext4
+              DEST_PATH: /etc/capi-bootstrap/cripple-boot-default
+              CONTENTS: "{{ $crippleBoot }}"
+              UID: 0
+              GID: 0
+              MODE: 0644
+              DIRMODE: 0755
 
           {{- if $imageObj.doGrowPart }}
           - name: "grow-partition"
