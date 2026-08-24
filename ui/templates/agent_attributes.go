@@ -252,9 +252,10 @@ func productFromData(p *data.Product) AgentProduct {
 	return out
 }
 
-// humanizeBytes formats a byte count using decimal (1000-based) units, e.g.
-// "32 GiB", matching the binary (1024-based) units hardware spec sheets use
-// for RAM/disk capacity. Zero or negative counts (unreported) render blank.
+// humanizeBytes formats a byte count using binary (1024-based) IEC units,
+// e.g. "32 GiB", matching how RAM/disk capacity is actually addressed even
+// though spec sheets often label it with decimal (GB/MB) suffixes. Zero or
+// negative counts (unreported) render blank.
 func humanizeBytes(n int64) string {
 	if n <= 0 {
 		return ""
@@ -262,7 +263,7 @@ func humanizeBytes(n int64) string {
 	return humanize.IBytes(uint64(n))
 }
 
-// humanizeSpeedMbps formats a link speed in Mbps, switching to Gbps above 1000.
+// humanizeSpeedMbps formats a link speed in Mbps, switching to Gbps at 1000 and above.
 func humanizeSpeedMbps(speedMbps uint32) string {
 	if speedMbps == 0 {
 		return ""

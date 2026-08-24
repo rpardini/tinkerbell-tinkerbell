@@ -90,19 +90,22 @@ func DiscoverBlockDevices(l logr.Logger) []*data.Block {
 			continue
 		}
 		if d.StorageController != block.StorageControllerLoop && d.StorageController != block.StorageControllerUnknown {
-			sizeBytes, _ := safecast.Convert[int64](d.SizeBytes)
-			physicalBlockSizeBytes, _ := safecast.Convert[int64](d.PhysicalBlockSizeBytes)
-			blockDevices = append(blockDevices, &data.Block{
-				Name:                   toPtr(d.Name),
-				ControllerType:         toPtr(d.StorageController.String()),
-				DriveType:              toPtr(d.DriveType.String()),
-				SizeBytes:              toPtr(sizeBytes),
-				PhysicalBlockSizeBytes: toPtr(physicalBlockSizeBytes),
-				Vendor:                 toPtr(d.Vendor),
-				Model:                  toPtr(d.Model),
-				WWN:                    toPtr(d.WWN),
-				SerialNumber:           toPtr(d.SerialNumber),
-			})
+			dev := &data.Block{
+				Name:           toPtr(d.Name),
+				ControllerType: toPtr(d.StorageController.String()),
+				DriveType:      toPtr(d.DriveType.String()),
+				Vendor:         toPtr(d.Vendor),
+				Model:          toPtr(d.Model),
+				WWN:            toPtr(d.WWN),
+				SerialNumber:   toPtr(d.SerialNumber),
+			}
+			if sizeBytes, err := safecast.Convert[int64](d.SizeBytes); err == nil {
+				dev.SizeBytes = toPtr(sizeBytes)
+			}
+			if physicalBlockSizeBytes, err := safecast.Convert[int64](d.PhysicalBlockSizeBytes); err == nil {
+				dev.PhysicalBlockSizeBytes = toPtr(physicalBlockSizeBytes)
+			}
+			blockDevices = append(blockDevices, dev)
 		}
 	}
 	return blockDevices
@@ -119,10 +122,9 @@ func DiscoverNetworks(l logr.Logger) []*data.Network {
 		if n == nil {
 			continue
 		}
-		nics = append(nics, &data.Network{
-			Name:      toPtr(n.Name),
-			Mac:       toPtr(n.MACAddress),
-			SpeedMbps: toPtr(parseSpeedMbps(n.Speed)),
+		nic := &data.Network{
+			Name: toPtr(n.Name),
+			Mac:  toPtr(n.MACAddress),
 			EnabledCapabilities: func() []string {
 				var capabilities []string
 				for _, c := range n.Capabilities {
@@ -132,7 +134,11 @@ func DiscoverNetworks(l logr.Logger) []*data.Network {
 				}
 				return capabilities
 			}(),
-		})
+		}
+		if speedMbps := parseSpeedMbps(n.Speed); speedMbps > 0 {
+			nic.SpeedMbps = toPtr(speedMbps)
+		}
+		nics = append(nics, nic)
 	}
 	return nics
 }
