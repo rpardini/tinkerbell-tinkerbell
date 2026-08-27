@@ -1,12 +1,18 @@
 package webhttp
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	tinkv1alpha1 "github.com/tinkerbell/tinkerbell/api/v1alpha1/tinkerbell"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 func TestHandleWorkflowList_Empty(t *testing.T) {
@@ -154,6 +160,37 @@ func TestHandleWorkflowEnable_DetailFragment(t *testing.T) {
 	body := w.Body.String()
 	if !contains(body, "workflow-disabled-control") {
 		t.Error("response should contain the disabled-control fragment")
+	}
+}
+
+func TestHandleWorkflowEnable_Forbidden(t *testing.T) {
+	wf := newTestWorkflow("wf-1", "template-1", tinkv1alpha1.WorkflowStateSuccess)
+	disabled := true
+	wf.Spec.Disabled = &disabled
+
+	scheme := newTestScheme()
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(newTestNamespace("default"), wf).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+				return apierrors.NewForbidden(schema.GroupResource{Group: "tinkerbell.org", Resource: "workflows"}, "wf-1", nil)
+			},
+		}).
+		Build()
+	kubeClient := &KubeClient{Client: fakeClient}
+
+	c, w := setupTestContext("/workflows/default/wf-1/enable", kubeClient)
+	c.Request = httptest.NewRequest(http.MethodPost, "/workflows/default/wf-1/enable", nil)
+	c.Params = gin.Params{
+		{Key: "namespace", Value: "default"},
+		{Key: "name", Value: "wf-1"},
+	}
+
+	HandleWorkflowEnable(c, testLog)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusForbidden)
 	}
 }
 

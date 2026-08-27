@@ -65,6 +65,17 @@ func HandlePermissions(c *gin.Context, log logr.Logger) {
 	RenderComponent(ctx, c.Writer, component, log)
 }
 
+// getSANamespace returns the service account namespace stored in the gin
+// context by the auth middleware, or "" if not set.
+func getSANamespace(c *gin.Context) string {
+	if ns, exists := c.Get(cookieNameSANamespace); exists {
+		if nsStr, ok := ns.(string); ok {
+			return nsStr
+		}
+	}
+	return ""
+}
+
 // HandlePermissionCheck handles checking permissions for a single resource.
 // Called via HTMX to progressively load permission status for each resource.
 func HandlePermissionCheck(c *gin.Context, log logr.Logger) {
@@ -82,16 +93,8 @@ func HandlePermissionCheck(c *gin.Context, log logr.Logger) {
 	resource := c.Param("resource")
 	group := c.Query("group")
 
-	// Get service account namespace for namespace-scoped permission checks
-	var saNamespace string
-	if ns, exists := c.Get(cookieNameSANamespace); exists {
-		if nsStr, ok := ns.(string); ok {
-			saNamespace = nsStr
-		}
-	}
-
 	// Check permissions for this resource
-	perm := getResourcePermissions(ctx, client, log, resource, group, saNamespace)
+	perm := getResourcePermissions(ctx, client, log, resource, group, getSANamespace(c))
 
 	component := templates.PermissionRow(perm)
 	c.Header("Content-Type", "text/html")
@@ -148,4 +151,46 @@ func getResourcePermissions(ctx context.Context, client *KubeClient, log logr.Lo
 		Namespace: permNamespace,
 		Verbs:     allowedVerbs,
 	}
+}
+
+// canUpdateWorkflows reports whether the current user can update
+// workflows.tinkerbell.org, checking cluster-wide access first and falling
+// back to namespace-scoped access. Used to disable the Enable action
+// proactively instead of letting it fail with a 403 on click.
+func canUpdateWorkflows(ctx context.Context, client *KubeClient, log logr.Logger, namespace string) bool {
+	if client.clientset == nil {
+		// Fail closed: no clientset (e.g. a test double lacking one) means we
+		// can't confirm access, so don't offer an action that would 403.
+		return false
+	}
+
+	sar := &authv1.SelfSubjectAccessReview{
+		Spec: authv1.SelfSubjectAccessReviewSpec{
+			ResourceAttributes: &authv1.ResourceAttributes{
+				Verb:     "update",
+				Group:    groupTinkerbell,
+				Resource: "workflows",
+			},
+		},
+	}
+
+	result, err := client.clientset.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
+	if err != nil {
+		log.V(1).Info("Failed to check update permission on workflows", "error", err)
+		return false
+	}
+	if result.Status.Allowed {
+		return true
+	}
+	if namespace == "" {
+		return false
+	}
+
+	sar.Spec.ResourceAttributes.Namespace = namespace
+	result, err = client.clientset.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
+	if err != nil {
+		log.V(1).Info("Failed to check namespace-scoped update permission on workflows", "namespace", namespace, "error", err)
+		return false
+	}
+	return result.Status.Allowed
 }

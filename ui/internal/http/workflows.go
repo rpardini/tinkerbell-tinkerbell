@@ -25,7 +25,9 @@ func isWorkflowDisabled(wf *tinkv1alpha1.Workflow) bool {
 }
 
 // toWorkflowRow converts a Workflow resource into its list-view representation.
-func toWorkflowRow(wf tinkv1alpha1.Workflow) templates.Workflow {
+// canUpdate reflects the current user's permission to enable a disabled
+// Workflow, checked once per list render rather than per row.
+func toWorkflowRow(wf tinkv1alpha1.Workflow, canUpdate bool) templates.Workflow {
 	task := ""
 	action := ""
 	agent := ""
@@ -40,6 +42,7 @@ func toWorkflowRow(wf tinkv1alpha1.Workflow) templates.Workflow {
 		TemplateRef: wf.Spec.TemplateRef,
 		State:       string(wf.Status.State),
 		Disabled:    isWorkflowDisabled(&wf),
+		CanUpdate:   canUpdate,
 		Task:        task,
 		Action:      action,
 		Agent:       agent,
@@ -73,6 +76,7 @@ func HandleWorkflowList(c *gin.Context, log logr.Logger) {
 	itemsPerPage = ValidateItemsPerPage(itemsPerPage)
 
 	var workflows []templates.Workflow
+	canUpdate := canUpdateWorkflows(ctx, client, log, getSANamespace(c))
 
 	workflowList, err := client.ListWorkflows(ctx, selectedNamespace)
 	if err != nil {
@@ -82,7 +86,7 @@ func HandleWorkflowList(c *gin.Context, log logr.Logger) {
 		}
 	} else {
 		for _, wf := range workflowList.Items {
-			workflows = append(workflows, toWorkflowRow(wf))
+			workflows = append(workflows, toWorkflowRow(wf, canUpdate))
 		}
 	}
 
@@ -129,6 +133,7 @@ func HandleWorkflowData(c *gin.Context, log logr.Logger) {
 	itemsPerPage = ValidateItemsPerPage(itemsPerPage)
 
 	var workflows []templates.Workflow
+	canUpdate := canUpdateWorkflows(ctx, client, log, getSANamespace(c))
 
 	workflowList, err := client.ListWorkflows(ctx, selectedNamespace)
 	if err != nil {
@@ -138,7 +143,7 @@ func HandleWorkflowData(c *gin.Context, log logr.Logger) {
 		}
 	} else {
 		for _, wf := range workflowList.Items {
-			workflows = append(workflows, toWorkflowRow(wf))
+			workflows = append(workflows, toWorkflowRow(wf, canUpdate))
 		}
 	}
 
@@ -203,6 +208,7 @@ func HandleWorkflowDetail(c *gin.Context, log logr.Logger) {
 		HardwareRef:       wf.Spec.HardwareRef,
 		State:             string(wf.Status.State),
 		Disabled:          isWorkflowDisabled(wf),
+		CanUpdate:         canUpdateWorkflows(ctx, client, log, getSANamespace(c)),
 		Task:              task,
 		Action:            action,
 		Agent:             agent,
@@ -251,20 +257,28 @@ func HandleWorkflowEnable(c *gin.Context, log logr.Logger) {
 			c.String(404, "Workflow not found")
 			return
 		}
+		if apierrors.IsForbidden(err) {
+			log.V(1).Info("Permission denied enabling "+nameSingularWorkflow, "namespace", namespace, "name", name, "error", err)
+			c.String(403, "You don't have permission to enable this Workflow")
+			return
+		}
 		log.Error(err, "Failed to update "+nameSingularWorkflow, "namespace", namespace, "name", name)
 		c.String(500, "Failed to update workflow")
 		return
 	}
 
+	canUpdate := canUpdateWorkflows(ctx, client, log, getSANamespace(c))
+
 	var component templ.Component
 	if c.PostForm("render") == "row" {
-		component = templates.WorkflowTableRow(toWorkflowRow(*wf))
+		component = templates.WorkflowTableRow(toWorkflowRow(*wf, canUpdate))
 	} else {
 		component = templates.WorkflowDisabledControl(templates.WorkflowDetail{
 			Name:      wf.Name,
 			Namespace: wf.Namespace,
 			Disabled:  false,
-		})
+			CanUpdate: canUpdate,
+		}, GetBaseURL(c))
 	}
 	c.Header("Content-Type", "text/html")
 	RenderComponent(ctx, c.Writer, component, log)
