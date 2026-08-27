@@ -409,7 +409,8 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 												<span class="text-gray-500 dark:text-gray-400"> (S/N: { hw.OutOfBand.Product.SerialNumber })</span>
 											}
 											if hw.OutOfBand.Product.Status.Health != "" {
-												<span class="ml-2">@StatusBadge(hw.OutOfBand.Product.Status.Health)</span>
+												<span class="ml-2 text-gray-500 dark:text-gray-400 text-xs">Health:</span>
+												<span class="ml-1">@StatusBadge(hw.OutOfBand.Product.Status.Health)</span>
 											}
 										</td>
 									</tr>
@@ -419,30 +420,8 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 					</div>
 				}
 
-				<!-- Collection Info -->
-				if hw.OutOfBand.CollectionMethod != "" || hw.OutOfBand.LastUpdated != "" {
-					<div>
-						<table class="min-w-full">
-							<tbody>
-								if hw.OutOfBand.CollectionMethod != "" {
-									<tr class="border-b border-gray-100 dark:border-darkBorder">
-										<td class="py-2 pr-4 text-sm font-medium text-gray-500 dark:text-gray-400 w-1/4">Collection Method</td>
-										<td class="py-2 text-sm text-gray-900 dark:text-white">{ hw.OutOfBand.CollectionMethod }</td>
-									</tr>
-								}
-								if hw.OutOfBand.LastUpdated != "" {
-									<tr class="border-b border-gray-100 dark:border-darkBorder last:border-b-0">
-										<td class="py-2 pr-4 text-sm font-medium text-gray-500 dark:text-gray-400 w-1/4">Last Updated</td>
-										<td class="py-2 text-sm text-gray-900 dark:text-white">{ hw.OutOfBand.LastUpdated }</td>
-									</tr>
-								}
-							</tbody>
-						</table>
-					</div>
-				}
-
 				<!-- BIOS -->
-				if hw.OutOfBand.BIOS.Vendor != "" || hw.OutOfBand.BIOS.FirmwareVersion != "" {
+				if hw.OutOfBand.BIOS.FirmwareVersion != "" {
 					<div>
 						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">BIOS</h4>
 						<div class="overflow-x-auto">
@@ -450,20 +429,16 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 								<tbody>
 									<tr class="border-b border-gray-100 dark:border-darkBorder last:border-b-0">
 										<td class="py-2 pr-4 text-sm text-gray-900 dark:text-white">
-											if hw.OutOfBand.BIOS.Vendor != "" {
-												{ hw.OutOfBand.BIOS.Vendor }
-											}
-											if hw.OutOfBand.BIOS.FirmwareVersion != "" {
-												<span class="text-gray-500 dark:text-gray-400"> v{ hw.OutOfBand.BIOS.FirmwareVersion }</span>
-											}
+											<span class="text-gray-500 dark:text-gray-400">Firmware Version:</span> v{ hw.OutOfBand.BIOS.FirmwareVersion }
 											if hw.OutOfBand.BIOS.ReleaseDate != "" {
 												<span class="text-gray-500 dark:text-gray-400"> ({ hw.OutOfBand.BIOS.ReleaseDate })</span>
 											}
 											if hw.OutOfBand.BIOS.Status.Health != "" {
-												<span class="ml-2">@StatusBadge(hw.OutOfBand.BIOS.Status.Health)</span>
+												<span class="ml-2 text-gray-500 dark:text-gray-400 text-xs">Health:</span>
+												<span class="ml-1">@StatusBadge(hw.OutOfBand.BIOS.Status.Health)</span>
 											}
 											if hw.OutOfBand.BIOS.Status.PostCode != nil {
-												<span class="text-gray-500 dark:text-gray-400"> POST: { strconv.Itoa(int(*hw.OutOfBand.BIOS.Status.PostCode)) }
+												<span class="text-gray-500 dark:text-gray-400 ml-2">POST: { strconv.Itoa(int(*hw.OutOfBand.BIOS.Status.PostCode)) }
 												if hw.OutOfBand.BIOS.Status.PostCodeStatus != "" {
 													({ hw.OutOfBand.BIOS.Status.PostCodeStatus })
 												}
@@ -478,7 +453,7 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 				}
 
 				<!-- BMC -->
-				if hw.OutOfBand.BMC.Vendor != "" || hw.OutOfBand.BMC.FirmwareVersion != "" {
+				if hw.OutOfBand.BMC.FirmwareVersion != "" {
 					<div>
 						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">BMC</h4>
 						<div class="overflow-x-auto">
@@ -486,17 +461,14 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 								<tbody>
 									<tr class="border-b border-gray-100 dark:border-darkBorder last:border-b-0">
 										<td class="py-2 pr-4 text-sm text-gray-900 dark:text-white">
-											if hw.OutOfBand.BMC.Vendor != "" {
-												{ hw.OutOfBand.BMC.Vendor }
-											}
-											if hw.OutOfBand.BMC.FirmwareVersion != "" {
-												<span class="text-gray-500 dark:text-gray-400"> v{ hw.OutOfBand.BMC.FirmwareVersion }</span>
-											}
+											<span class="text-gray-500 dark:text-gray-400">Firmware Version:</span> v{ hw.OutOfBand.BMC.FirmwareVersion }
 											if hw.OutOfBand.BMC.Status.Health != "" {
-												<span class="ml-2">@StatusBadge(hw.OutOfBand.BMC.Status.Health)</span>
+												<span class="ml-2 text-gray-500 dark:text-gray-400 text-xs">Health:</span>
+												<span class="ml-1">@StatusBadge(hw.OutOfBand.BMC.Status.Health)</span>
 											}
 											if hw.OutOfBand.BMC.NIC != nil && hw.OutOfBand.BMC.NIC.MACAddresses() != "" {
-												<span class="text-gray-500 dark:text-gray-400 font-mono"> ({ hw.OutOfBand.BMC.NIC.MACAddresses() })</span>
+												<span class="ml-2 text-gray-500 dark:text-gray-400 text-xs">MAC Address:</span>
+												<span class="ml-1 font-mono text-gray-500 dark:text-gray-400">{ hw.OutOfBand.BMC.NIC.MACAddresses() }</span>
 											}
 										</td>
 									</tr>
@@ -742,6 +714,32 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 											</td>
 										</tr>
 									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				}
+
+				<!-- Collection Info -->
+				if hw.OutOfBand.CollectionMethod != "" || hw.OutOfBand.LastUpdated != "" {
+					<div>
+						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Collection Info</h4>
+						<div class="overflow-x-auto">
+							<table class="min-w-full">
+								<tbody>
+									<tr class="border-b border-gray-100 dark:border-darkBorder last:border-b-0">
+										<td class="py-2 text-sm text-gray-900 dark:text-white">
+											if hw.OutOfBand.CollectionMethod != "" {
+												<span class="text-gray-500 dark:text-gray-400">Collection Method:</span> { hw.OutOfBand.CollectionMethod }
+											}
+											if hw.OutOfBand.LastUpdated != "" {
+												if hw.OutOfBand.CollectionMethod != "" {
+													<span class="text-gray-400 dark:text-gray-500 mx-2">•</span>
+												}
+												<span class="text-gray-500 dark:text-gray-400">Last Updated:</span> { hw.OutOfBand.LastUpdated }
+											}
+										</td>
+									</tr>
 								</tbody>
 							</table>
 						</div>
