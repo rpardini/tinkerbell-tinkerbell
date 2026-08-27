@@ -2809,9 +2809,9 @@ func WorkflowDetailContent(wf WorkflowDetail, baseURL string) templ.Component {
 
 // WorkflowDisabledControl renders the current spec.disabled state of a Workflow.
 // Only an "Enable" action is offered, and the backend endpoint it posts to only
-// ever clears spec.disabled: a Workflow left enabled leaves State == "" almost
-// immediately on its own, so a "Disable" action would only ever win a narrow
-// race against the controller and isn't offered.
+// ever sets spec.disabled to false: a Workflow left enabled leaves State == ""
+// almost immediately on its own, so a "Disable" action would only ever win a
+// narrow race against the controller and isn't offered.
 func WorkflowDisabledControl(wf WorkflowDetail) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
