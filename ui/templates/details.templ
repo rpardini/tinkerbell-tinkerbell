@@ -421,7 +421,7 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 				}
 
 				<!-- BIOS -->
-				if hw.OutOfBand.BIOS.FirmwareVersion != "" {
+				if hw.OutOfBand.BIOS.FirmwareVersion != "" || hw.OutOfBand.BIOS.ReleaseDate != "" || hw.OutOfBand.BIOS.Status.Health != "" || hw.OutOfBand.BIOS.Status.PostCode != nil {
 					<div>
 						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">BIOS</h4>
 						<div class="overflow-x-auto">
@@ -429,7 +429,9 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 								<tbody>
 									<tr class="border-b border-gray-100 dark:border-darkBorder last:border-b-0">
 										<td class="py-2 pr-4 text-sm text-gray-900 dark:text-white">
-											<span class="text-gray-500 dark:text-gray-400">Firmware Version:</span> v{ hw.OutOfBand.BIOS.FirmwareVersion }
+											if hw.OutOfBand.BIOS.FirmwareVersion != "" {
+												<span class="text-gray-500 dark:text-gray-400">Firmware Version:</span> v{ hw.OutOfBand.BIOS.FirmwareVersion }
+											}
 											if hw.OutOfBand.BIOS.ReleaseDate != "" {
 												<span class="text-gray-500 dark:text-gray-400"> ({ hw.OutOfBand.BIOS.ReleaseDate })</span>
 											}
@@ -453,7 +455,7 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 				}
 
 				<!-- BMC -->
-				if hw.OutOfBand.BMC.FirmwareVersion != "" {
+				if hw.OutOfBand.BMC.FirmwareVersion != "" || hw.OutOfBand.BMC.Status.Health != "" || (hw.OutOfBand.BMC.NIC != nil && hw.OutOfBand.BMC.NIC.MACAddresses() != "") {
 					<div>
 						<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">BMC</h4>
 						<div class="overflow-x-auto">
@@ -461,7 +463,9 @@ templ HardwareDetailContent(hw HardwareDetail, baseURL string) {
 								<tbody>
 									<tr class="border-b border-gray-100 dark:border-darkBorder last:border-b-0">
 										<td class="py-2 pr-4 text-sm text-gray-900 dark:text-white">
-											<span class="text-gray-500 dark:text-gray-400">Firmware Version:</span> v{ hw.OutOfBand.BMC.FirmwareVersion }
+											if hw.OutOfBand.BMC.FirmwareVersion != "" {
+												<span class="text-gray-500 dark:text-gray-400">Firmware Version:</span> v{ hw.OutOfBand.BMC.FirmwareVersion }
+											}
 											if hw.OutOfBand.BMC.Status.Health != "" {
 												<span class="ml-2 text-gray-500 dark:text-gray-400 text-xs">Health:</span>
 												<span class="ml-1">@StatusBadge(hw.OutOfBand.BMC.Status.Health)</span>
