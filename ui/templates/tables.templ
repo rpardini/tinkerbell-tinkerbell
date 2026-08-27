@@ -207,7 +207,7 @@ templ WorkflowTableContent(workflowData WorkflowPageData) {
 						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Template</th>
 						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">State</th>
 						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Age</th>
-						<th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"></th>
+						<th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Manage</th>
 					</tr>
 				</thead>
 				<tbody class="bg-white dark:bg-darkNav divide-y divide-gray-100 dark:divide-darkBorder">
@@ -254,21 +254,31 @@ templ WorkflowTableRow(wf Workflow) {
 				<a href={ templ.SafeURL("/templates/" + wf.Namespace + "/" + wf.TemplateRef) } class="text-tink-teal-600 hover:text-tink-teal-700 dark:text-tink-teal-400 dark:hover:text-tink-teal-300 hover:underline" onclick="event.stopPropagation()">{ wf.TemplateRef }</a>
 			}
 		</td>
-		<td class="px-6 py-4 whitespace-nowrap">@StatusBadge(wf.State)</td>
+		<td class="px-6 py-4 whitespace-nowrap">
+			if wf.Disabled {
+				@StatusBadge("Disabled")
+			} else {
+				@StatusBadge(wf.State)
+			}
+		</td>
 		<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{ wf.CreatedAt }</td>
 		<td class="px-6 py-4 whitespace-nowrap text-right">
 			if wf.Disabled {
 				<button
+					type="button"
 					hx-post={ "/workflows/" + wf.Namespace + "/" + wf.Name + "/enable" }
 					hx-vals={ `{"render":"row"}` }
 					hx-target="closest tr"
 					hx-swap="outerHTML"
 					onclick="event.stopPropagation()"
-					title="Enable this Workflow"
-					class="inline-flex items-center justify-center h-7 w-7 rounded-md text-tink-teal-600 hover:text-tink-teal-700 hover:bg-tink-teal-50 dark:text-tink-teal-400 dark:hover:text-tink-teal-300 dark:hover:bg-tink-teal-900/30 transition-colors cursor-pointer"
+					aria-label="Enable this Workflow"
+					class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-tink-teal-200 dark:border-tink-teal-800 text-xs font-medium text-tink-teal-600 hover:text-tink-teal-700 hover:bg-tink-teal-50 dark:text-tink-teal-400 dark:hover:text-tink-teal-300 dark:hover:bg-tink-teal-900/30 transition-colors cursor-pointer"
 				>
 					@templ.Raw(playIcon())
+					Enable
 				</button>
+			} else {
+				<span class="text-gray-400 dark:text-gray-500">&mdash;</span>
 			}
 		</td>
 	</tr>

@@ -2,6 +2,7 @@ package webhttp
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -92,6 +93,83 @@ func TestHandleWorkflowDetail_NotFound(t *testing.T) {
 	}
 
 	HandleWorkflowDetail(c, testLog)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+func TestHandleWorkflowEnable_Row(t *testing.T) {
+	wf := newTestWorkflow("wf-1", "template-1", tinkv1alpha1.WorkflowStateSuccess)
+	disabled := true
+	wf.Spec.Disabled = &disabled
+	kubeClient := newFakeKubeClient(
+		newTestNamespace("default"),
+		wf,
+	)
+
+	c, w := setupTestContext("/workflows/default/wf-1/enable", kubeClient)
+	c.Request = httptest.NewRequest(http.MethodPost, "/workflows/default/wf-1/enable", nil)
+	c.Request.PostForm = map[string][]string{"render": {"row"}}
+	c.Params = gin.Params{
+		{Key: "namespace", Value: "default"},
+		{Key: "name", Value: "wf-1"},
+	}
+
+	HandleWorkflowEnable(c, testLog)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !contains(body, "<tr") {
+		t.Error("response should contain a <tr> row fragment")
+	}
+	if contains(body, "Enable this Workflow") {
+		t.Error("enabled row should no longer show the Enable action")
+	}
+}
+
+func TestHandleWorkflowEnable_DetailFragment(t *testing.T) {
+	wf := newTestWorkflow("wf-1", "template-1", tinkv1alpha1.WorkflowStateSuccess)
+	disabled := true
+	wf.Spec.Disabled = &disabled
+	kubeClient := newFakeKubeClient(
+		newTestNamespace("default"),
+		wf,
+	)
+
+	c, w := setupTestContext("/workflows/default/wf-1/enable", kubeClient)
+	c.Request = httptest.NewRequest(http.MethodPost, "/workflows/default/wf-1/enable", nil)
+	c.Params = gin.Params{
+		{Key: "namespace", Value: "default"},
+		{Key: "name", Value: "wf-1"},
+	}
+
+	HandleWorkflowEnable(c, testLog)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !contains(body, "workflow-disabled-control") {
+		t.Error("response should contain the disabled-control fragment")
+	}
+}
+
+func TestHandleWorkflowEnable_NotFound(t *testing.T) {
+	kubeClient := newFakeKubeClient(
+		newTestNamespace("default"),
+	)
+
+	c, w := setupTestContext("/workflows/default/nonexistent/enable", kubeClient)
+	c.Request = httptest.NewRequest(http.MethodPost, "/workflows/default/nonexistent/enable", nil)
+	c.Params = gin.Params{
+		{Key: "namespace", Value: "default"},
+		{Key: "name", Value: "nonexistent"},
+	}
+
+	HandleWorkflowEnable(c, testLog)
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)

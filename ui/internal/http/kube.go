@@ -186,7 +186,7 @@ func (k *KubeClient) GetWorkflow(ctx context.Context, namespace, name string) (*
 	return &wf, nil
 }
 
-// EnableWorkflow clears spec.disabled on a workflow resource and returns the updated object.
+// EnableWorkflow sets spec.disabled to false on a workflow resource and returns the updated object.
 func (k *KubeClient) EnableWorkflow(ctx context.Context, namespace, name string) (*tinkv1alpha1.Workflow, error) {
 	wf, err := k.GetWorkflow(ctx, namespace, name)
 	if err != nil {

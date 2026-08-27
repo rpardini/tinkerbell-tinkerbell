@@ -224,9 +224,9 @@ func HandleWorkflowDetail(c *gin.Context, log logr.Logger) {
 	RenderComponent(c.Request.Context(), c.Writer, component, log)
 }
 
-// HandleWorkflowEnable handles enabling a disabled workflow (clearing spec.disabled)
-// and returns the updated control fragment for an htmx swap. There is deliberately no
-// way to disable a workflow through this endpoint: see WorkflowDisabledControl.
+// HandleWorkflowEnable handles enabling a disabled workflow (setting spec.disabled
+// to false) and returns the updated control fragment for an htmx swap. There is
+// deliberately no way to disable a workflow through this endpoint: see WorkflowDisabledControl.
 func HandleWorkflowEnable(c *gin.Context, log logr.Logger) {
 	ctx := c.Request.Context()
 	client, err := GetKubeClientFromGinContext(c)
