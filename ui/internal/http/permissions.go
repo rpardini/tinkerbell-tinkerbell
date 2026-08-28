@@ -21,7 +21,7 @@ type TinkerbellResource struct {
 var TinkerbellResources = []TinkerbellResource{
 	{resourceHardware, groupTinkerbell},
 	{"templates", groupTinkerbell},
-	{"workflows", groupTinkerbell},
+	{resourceWorkflows, groupTinkerbell},
 	{"workflowrulesets", groupTinkerbell},
 	{"machines", groupBMC},
 	{"jobs", groupBMC},
@@ -169,7 +169,7 @@ func canUpdateWorkflows(ctx context.Context, client *KubeClient, log logr.Logger
 			ResourceAttributes: &authv1.ResourceAttributes{
 				Verb:     "update",
 				Group:    groupTinkerbell,
-				Resource: "workflows",
+				Resource: resourceWorkflows,
 			},
 		},
 	}

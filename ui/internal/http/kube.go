@@ -34,9 +34,10 @@ const (
 	ContextKeyBaseURL = "baseURL"
 
 	// Kubernetes API groups and RBAC identifiers for Tinkerbell resources.
-	groupTinkerbell = "tinkerbell.org"
-	groupBMC        = "bmc.tinkerbell.org"
-	verbList        = "list"
+	groupTinkerbell   = "tinkerbell.org"
+	groupBMC          = "bmc.tinkerbell.org"
+	verbList          = "list"
+	resourceWorkflows = "workflows" // plural Kubernetes RBAC resource name
 
 	// Lowercase resource identifiers used as search result types and icon
 	// names; some (hardware, tasks) also match Kubernetes RBAC resource names.
