@@ -105,6 +105,34 @@ func TestHandleWorkflowDetail_NotFound(t *testing.T) {
 	}
 }
 
+func TestHandleWorkflowList_DisabledWorkflowsAcrossNamespaces(t *testing.T) {
+	disabled := true
+	wfDefault := newTestWorkflow("wf-1", "template-1", tinkv1alpha1.WorkflowStateSuccess)
+	wfDefault.Spec.Disabled = &disabled
+	wfOther := newTestWorkflow("wf-2", "template-2", tinkv1alpha1.WorkflowStateSuccess)
+	wfOther.Namespace = "other"
+	wfOther.Spec.Disabled = &disabled
+
+	kubeClient := newFakeKubeClient(
+		newTestNamespace("default"),
+		newTestNamespace("other"),
+		wfDefault,
+		wfOther,
+	)
+
+	c, w := setupTestContext("/workflows", kubeClient)
+
+	HandleWorkflowList(c, testLog)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !contains(body, "wf-1") || !contains(body, "wf-2") {
+		t.Error("response should contain both disabled workflows across namespaces")
+	}
+}
+
 func TestHandleWorkflowEnable_Row(t *testing.T) {
 	wf := newTestWorkflow("wf-1", "template-1", tinkv1alpha1.WorkflowStateSuccess)
 	disabled := true

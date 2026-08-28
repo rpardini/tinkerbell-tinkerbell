@@ -1,6 +1,7 @@
 package webhttp
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -25,9 +26,9 @@ func isWorkflowDisabled(wf *tinkv1alpha1.Workflow) bool {
 }
 
 // toWorkflowRow converts a Workflow resource into its list-view representation.
-// canUpdate reflects the current user's permission to enable a disabled
-// Workflow, checked once per list render rather than per row.
-func toWorkflowRow(wf tinkv1alpha1.Workflow, canUpdate bool) templates.Workflow {
+// CanUpdate is left false; call setCanUpdatePermissions afterwards to fill it
+// in for disabled rows.
+func toWorkflowRow(wf tinkv1alpha1.Workflow) templates.Workflow {
 	task := ""
 	action := ""
 	agent := ""
@@ -42,11 +43,31 @@ func toWorkflowRow(wf tinkv1alpha1.Workflow, canUpdate bool) templates.Workflow 
 		TemplateRef: wf.Spec.TemplateRef,
 		State:       string(wf.Status.State),
 		Disabled:    isWorkflowDisabled(&wf),
-		CanUpdate:   canUpdate,
 		Task:        task,
 		Action:      action,
 		Agent:       agent,
 		CreatedAt:   wf.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
+	}
+}
+
+// setCanUpdatePermissions fills in CanUpdate for each disabled row in rows,
+// checking patch permission on workflows.tinkerbell.org once per distinct
+// namespace encountered (not once per row, and not at all if nothing in the
+// list is disabled) since a workflow list can span multiple namespaces with
+// different RBAC grants.
+func setCanUpdatePermissions(ctx context.Context, client *KubeClient, log logr.Logger, rows []templates.Workflow) {
+	cache := map[string]bool{}
+	for i := range rows {
+		if !rows[i].Disabled {
+			continue
+		}
+		ns := rows[i].Namespace
+		can, ok := cache[ns]
+		if !ok {
+			can = canPatchWorkflows(ctx, client, log, ns)
+			cache[ns] = can
+		}
+		rows[i].CanUpdate = can
 	}
 }
 
@@ -76,7 +97,6 @@ func HandleWorkflowList(c *gin.Context, log logr.Logger) {
 	itemsPerPage = ValidateItemsPerPage(itemsPerPage)
 
 	var workflows []templates.Workflow
-	canUpdate := canUpdateWorkflows(ctx, client, log, getSANamespace(c))
 
 	workflowList, err := client.ListWorkflows(ctx, selectedNamespace)
 	if err != nil {
@@ -86,8 +106,9 @@ func HandleWorkflowList(c *gin.Context, log logr.Logger) {
 		}
 	} else {
 		for _, wf := range workflowList.Items {
-			workflows = append(workflows, toWorkflowRow(wf, canUpdate))
+			workflows = append(workflows, toWorkflowRow(wf))
 		}
+		setCanUpdatePermissions(ctx, client, log, workflows)
 	}
 
 	workflowPageData := GetPaginatedWorkflows(workflows, page, itemsPerPage)
@@ -133,7 +154,6 @@ func HandleWorkflowData(c *gin.Context, log logr.Logger) {
 	itemsPerPage = ValidateItemsPerPage(itemsPerPage)
 
 	var workflows []templates.Workflow
-	canUpdate := canUpdateWorkflows(ctx, client, log, getSANamespace(c))
 
 	workflowList, err := client.ListWorkflows(ctx, selectedNamespace)
 	if err != nil {
@@ -143,8 +163,9 @@ func HandleWorkflowData(c *gin.Context, log logr.Logger) {
 		}
 	} else {
 		for _, wf := range workflowList.Items {
-			workflows = append(workflows, toWorkflowRow(wf, canUpdate))
+			workflows = append(workflows, toWorkflowRow(wf))
 		}
+		setCanUpdatePermissions(ctx, client, log, workflows)
 	}
 
 	workflowPageData := GetPaginatedWorkflows(workflows, page, itemsPerPage)
@@ -208,7 +229,7 @@ func HandleWorkflowDetail(c *gin.Context, log logr.Logger) {
 		HardwareRef:       wf.Spec.HardwareRef,
 		State:             string(wf.Status.State),
 		Disabled:          isWorkflowDisabled(wf),
-		CanUpdate:         canUpdateWorkflows(ctx, client, log, getSANamespace(c)),
+		CanUpdate:         canPatchWorkflows(ctx, client, log, namespace),
 		Task:              task,
 		Action:            action,
 		Agent:             agent,
@@ -267,11 +288,13 @@ func HandleWorkflowEnable(c *gin.Context, log logr.Logger) {
 		return
 	}
 
-	canUpdate := canUpdateWorkflows(ctx, client, log, getSANamespace(c))
+	canUpdate := canPatchWorkflows(ctx, client, log, namespace)
 
 	var component templ.Component
 	if c.PostForm("render") == "row" {
-		component = templates.WorkflowTableRow(toWorkflowRow(*wf, canUpdate))
+		row := toWorkflowRow(*wf)
+		row.CanUpdate = canUpdate
+		component = templates.WorkflowTableRow(row)
 	} else {
 		component = templates.WorkflowDisabledControl(templates.WorkflowDetail{
 			Name:      wf.Name,
