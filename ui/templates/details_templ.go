@@ -2599,7 +2599,7 @@ func WorkflowDetailContent(wf WorkflowDetail, baseURL string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = WorkflowDisabledControl(wf, baseURL).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = WorkflowDisabledControl(wf).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -2817,7 +2817,7 @@ func WorkflowDetailContent(wf WorkflowDetail, baseURL string) templ.Component {
 // non-actionable (aria-disabled + tooltip, not the native disabled attribute,
 // so it stays keyboard-focusable and screen readers announce why) instead of
 // letting the click fail with a 403.
-func WorkflowDisabledControl(wf WorkflowDetail, baseURL string) templ.Component {
+func WorkflowDisabledControl(wf WorkflowDetail) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -2874,20 +2874,15 @@ func WorkflowDisabledControl(wf WorkflowDetail, baseURL string) templ.Component 
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 308, "Enable</span> <a href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 308, "Enable</span> <span aria-hidden=\"true\" title=\"You need update permission on workflows.tinkerbell.org to enable this Workflow\" class=\"text-gray-400 dark:text-gray-500 cursor-help\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var121 templ.SafeURL
-				templ_7745c5c3_Var121, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(baseURL + "/permissions"))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1105, Col: 53}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var121))
+				templ_7745c5c3_Err = templ.Raw(infoIcon()).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 309, "\" class=\"text-xs text-tink-teal-600 hover:text-tink-teal-700 dark:text-tink-teal-400 dark:hover:text-tink-teal-300 hover:underline\">Permissions</a>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 309, "</span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -2922,9 +2917,9 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var122 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var122 == nil {
-			templ_7745c5c3_Var122 = templ.NopComponent
+		templ_7745c5c3_Var121 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var121 == nil {
+			templ_7745c5c3_Var121 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = MainInfoHeader(tpl.Name, tpl.State).Render(ctx, templ_7745c5c3_Buffer)
@@ -2935,7 +2930,7 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var123 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var122 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -2953,7 +2948,7 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var123), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var122), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -2962,7 +2957,7 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if tpl.Data != "" {
-			templ_7745c5c3_Var124 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Var123 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -2980,7 +2975,7 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = SectionBoxCollapsible("Template Data", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var124), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = SectionBoxCollapsible("Template Data", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var123), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -2989,7 +2984,7 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var125 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var124 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3007,7 +3002,7 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Spec", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var125), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Spec", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var124), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3015,7 +3010,7 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var126 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var125 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3033,7 +3028,7 @@ func TemplateDetailContent(tpl TemplateDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var126), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var125), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3057,9 +3052,9 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var127 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var127 == nil {
-			templ_7745c5c3_Var127 = templ.NopComponent
+		templ_7745c5c3_Var126 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var126 == nil {
+			templ_7745c5c3_Var126 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = MainInfoHeader(machine.Name, machine.PowerState).Render(ctx, templ_7745c5c3_Buffer)
@@ -3070,7 +3065,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var128 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var127 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3088,7 +3083,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var128), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var127), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3096,7 +3091,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var129 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var128 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3118,7 +3113,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Machine Details").Render(templ.WithChildren(ctx, templ_7745c5c3_Var129), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Machine Details").Render(templ.WithChildren(ctx, templ_7745c5c3_Var128), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3126,7 +3121,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var130 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var129 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3144,7 +3139,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Status", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var130), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Status", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var129), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3152,7 +3147,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var131 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var130 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3170,7 +3165,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Spec", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var131), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Spec", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var130), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3178,7 +3173,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var132 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var131 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3196,7 +3191,7 @@ func BMCMachineDetailContent(machine BMCMachineDetail, baseURL string) templ.Com
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var132), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var131), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3220,9 +3215,9 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var133 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var133 == nil {
-			templ_7745c5c3_Var133 = templ.NopComponent
+		templ_7745c5c3_Var132 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var132 == nil {
+			templ_7745c5c3_Var132 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = MainInfoHeader(job.Name, job.Status).Render(ctx, templ_7745c5c3_Buffer)
@@ -3233,7 +3228,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var134 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var133 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3251,7 +3246,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var134), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var133), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3259,7 +3254,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var135 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var134 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3281,7 +3276,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Job Details").Render(templ.WithChildren(ctx, templ_7745c5c3_Var135), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Job Details").Render(templ.WithChildren(ctx, templ_7745c5c3_Var134), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3289,7 +3284,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var136 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var135 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3307,7 +3302,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Status", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var136), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Status", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var135), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3315,7 +3310,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var137 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var136 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3333,7 +3328,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Spec", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var137), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Spec", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var136), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3341,7 +3336,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var138 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var137 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3359,7 +3354,7 @@ func BMCJobDetailContent(job BMCJobDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var138), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var137), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3383,9 +3378,9 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var139 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var139 == nil {
-			templ_7745c5c3_Var139 = templ.NopComponent
+		templ_7745c5c3_Var138 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var138 == nil {
+			templ_7745c5c3_Var138 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = MainInfoHeader(task.Name, task.Status).Render(ctx, templ_7745c5c3_Buffer)
@@ -3396,7 +3391,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var140 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var139 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3414,7 +3409,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var140), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var139), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3422,7 +3417,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var141 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var140 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3450,7 +3445,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Task Details").Render(templ.WithChildren(ctx, templ_7745c5c3_Var141), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Task Details").Render(templ.WithChildren(ctx, templ_7745c5c3_Var140), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3458,7 +3453,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var142 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var141 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3476,7 +3471,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Status", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var142), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Status", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var141), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3484,7 +3479,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var143 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var142 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3502,7 +3497,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Spec", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var143), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Spec", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var142), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3510,7 +3505,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var144 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var143 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3528,7 +3523,7 @@ func BMCTaskDetailContent(task BMCTaskDetail, baseURL string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var144), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var143), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3552,9 +3547,9 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var145 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var145 == nil {
-			templ_7745c5c3_Var145 = templ.NopComponent
+		templ_7745c5c3_Var144 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var144 == nil {
+			templ_7745c5c3_Var144 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = MainInfoHeader(rs.Name, "").Render(ctx, templ_7745c5c3_Buffer)
@@ -3565,7 +3560,7 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var146 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var145 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3583,7 +3578,7 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var146), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Info").Render(templ.WithChildren(ctx, templ_7745c5c3_Var145), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3591,7 +3586,7 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var147 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var146 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3612,12 +3607,12 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var148 templ.SafeURL
-				templ_7745c5c3_Var148, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(baseURL + "/templates/" + rs.WorkflowNamespace + "/" + rs.TemplateRef))
+				var templ_7745c5c3_Var147 templ.SafeURL
+				templ_7745c5c3_Var147, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(baseURL + "/templates/" + rs.WorkflowNamespace + "/" + rs.TemplateRef))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1255, Col: 125}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1261, Col: 125}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var148))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var147))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -3625,12 +3620,12 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var149 string
-				templ_7745c5c3_Var149, templ_7745c5c3_Err = templ.JoinStringErrs(rs.TemplateRef)
+				var templ_7745c5c3_Var148 string
+				templ_7745c5c3_Var148, templ_7745c5c3_Err = templ.JoinStringErrs(rs.TemplateRef)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1255, Col: 266}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1261, Col: 266}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var149))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var148))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -3644,12 +3639,12 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var150 string
-				templ_7745c5c3_Var150, templ_7745c5c3_Err = templ.JoinStringErrs(rs.WorkflowNamespace)
+				var templ_7745c5c3_Var149 string
+				templ_7745c5c3_Var149, templ_7745c5c3_Err = templ.JoinStringErrs(rs.WorkflowNamespace)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1261, Col: 83}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1267, Col: 83}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var150))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var149))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -3697,12 +3692,12 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var151 string
-				templ_7745c5c3_Var151, templ_7745c5c3_Err = templ.JoinStringErrs(rs.AgentValue)
+				var templ_7745c5c3_Var150 string
+				templ_7745c5c3_Var150, templ_7745c5c3_Err = templ.JoinStringErrs(rs.AgentValue)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1287, Col: 86}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1293, Col: 86}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var151))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var150))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -3717,7 +3712,7 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBox("Ruleset Details").Render(templ.WithChildren(ctx, templ_7745c5c3_Var147), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBox("Ruleset Details").Render(templ.WithChildren(ctx, templ_7745c5c3_Var146), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3726,7 +3721,7 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 			return templ_7745c5c3_Err
 		}
 		if len(rs.Rules) > 0 {
-			templ_7745c5c3_Var152 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Var151 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -3747,12 +3742,12 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var153 string
-					templ_7745c5c3_Var153, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i + 1))
+					var templ_7745c5c3_Var152 string
+					templ_7745c5c3_Var152, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i + 1))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1302, Col: 98}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1308, Col: 98}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var153))
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var152))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -3760,12 +3755,12 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var154 string
-					templ_7745c5c3_Var154, templ_7745c5c3_Err = templ.JoinStringErrs(rule)
+					var templ_7745c5c3_Var153 string
+					templ_7745c5c3_Var153, templ_7745c5c3_Err = templ.JoinStringErrs(rule)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1304, Col: 103}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `details.templ`, Line: 1310, Col: 103}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var154))
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var153))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -3780,7 +3775,7 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = SectionBoxCollapsible("Matching Rules", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var152), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = SectionBoxCollapsible("Matching Rules", true).Render(templ.WithChildren(ctx, templ_7745c5c3_Var151), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -3789,7 +3784,7 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Var155 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var154 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -3807,7 +3802,7 @@ func WorkflowRuleSetDetailContent(rs WorkflowRuleSetDetail, baseURL string) temp
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var155), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SectionBoxCollapsible("Full YAML", false).Render(templ.WithChildren(ctx, templ_7745c5c3_Var154), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

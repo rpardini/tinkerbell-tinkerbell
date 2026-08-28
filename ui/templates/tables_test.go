@@ -71,7 +71,7 @@ func TestWorkflowDisabledControlEnableAction(t *testing.T) {
 			wantEnable: true,
 		},
 		{
-			name:        "disabled and cannot update shows locked tooltip with permissions link",
+			name:        "disabled and cannot update shows locked tooltip",
 			wf:          templates.WorkflowDetail{Name: "wf-1", Namespace: "default", Disabled: true, CanUpdate: false},
 			wantTooltip: true,
 		},
@@ -80,13 +80,13 @@ func TestWorkflowDisabledControlEnableAction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf strings.Builder
-			if err := templates.WorkflowDisabledControl(tt.wf, "/ui").Render(context.Background(), &buf); err != nil {
+			if err := templates.WorkflowDisabledControl(tt.wf).Render(context.Background(), &buf); err != nil {
 				t.Fatalf("Failed to render control: %v", err)
 			}
 			html := buf.String()
 
 			hasActiveButton := strings.Contains(html, `hx-post="/workflows/default/wf-1/enable"`)
-			hasTooltip := strings.Contains(html, "You need") && strings.Contains(html, "/ui/permissions")
+			hasTooltip := strings.Contains(html, "You need")
 
 			if hasActiveButton != tt.wantEnable {
 				t.Errorf("active Enable button present = %v, want %v", hasActiveButton, tt.wantEnable)

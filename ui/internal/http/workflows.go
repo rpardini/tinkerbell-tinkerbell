@@ -301,7 +301,7 @@ func HandleWorkflowEnable(c *gin.Context, log logr.Logger) {
 			Namespace: wf.Namespace,
 			Disabled:  false,
 			CanUpdate: canUpdate,
-		}, GetBaseURL(c))
+		})
 	}
 	c.Header("Content-Type", "text/html")
 	RenderComponent(ctx, c.Writer, component, log)

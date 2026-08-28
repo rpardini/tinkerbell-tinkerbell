@@ -290,7 +290,13 @@ templ WorkflowTableRow(wf Workflow) {
 							@templ.Raw(lockIcon())
 							Enable
 						</span>
-						<a href="/permissions" class="text-xs text-tink-teal-600 hover:text-tink-teal-700 dark:text-tink-teal-400 dark:hover:text-tink-teal-300 hover:underline whitespace-nowrap">Permissions</a>
+						<span
+							aria-hidden="true"
+							title="You need update permission on workflows.tinkerbell.org to enable this Workflow"
+							class="text-gray-400 dark:text-gray-500 cursor-help"
+						>
+							@templ.Raw(infoIcon())
+						</span>
 					</div>
 				}
 			} else {
