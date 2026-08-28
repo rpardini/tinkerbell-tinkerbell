@@ -335,17 +335,20 @@ func TestRPiNetbootRoute(t *testing.T) {
 			resolver:    &fakeResolver{},
 			wantHandled: false,
 		},
+		// AllowNetboot must be set here or the netboot gate short-circuits
+		// before the RPI check and this case stops testing what it names.
 		"hardware without RPi config passes through": {
 			filename: serial + "/config.txt",
 			assetDir: assetDir,
 			resolver: &fakeResolver{byIP: map[string]hardware.Info{
-				clientIP.String(): {},
+				clientIP.String(): {AllowNetboot: true},
 			}},
 			wantHandled: false,
 		},
 		// Without this the route keeps handing a freshly provisioned machine
-		// the OSIE after the Workflow controller has set AllowPXE false, and
-		// it never boots the disk it was just installed to.
+		// the OSIE after the Workflow controller has cleared AllowNetboot (the
+		// Hardware's netboot.allowPXE), and it never boots the disk it was
+		// just installed to.
 		"netboot not allowed passes through": {
 			filename: serial + "/config.txt",
 			assetDir: assetDir,
@@ -386,7 +389,10 @@ func TestRPiNetbootRoute(t *testing.T) {
 			filename: serial + "/cmdline.txt",
 			assetDir: assetDir,
 			resolver: &fakeResolver{byIP: map[string]hardware.Info{clientIP.String(): {
-				RPI: hardware.RPI{SerialNum: serial, FirmwarePath: rewrite},
+				// As above, AllowNetboot has to be set for the case to reach
+				// the cmdline.txt branch at all.
+				AllowNetboot: true,
+				RPI:          hardware.RPI{SerialNum: serial, FirmwarePath: rewrite},
 				// no KernelParams
 			}}},
 			wantHandled: false,

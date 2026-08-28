@@ -53,11 +53,14 @@ func (r RPiNetbootRoute) TryServe(ctx context.Context, req Request, w io.ReaderF
 	}
 
 	// Netboot has to be allowed, the same gate the iPXE script handler
-	// applies. Without this the route serves boot files forever: a machine
-	// that has just been provisioned reboots, the Workflow controller sets
-	// AllowPXE false via bootOptions.toggleAllowNetboot, and this route hands
-	// it the OSIE again instead of letting it fall through its BOOT_ORDER to
-	// the disk it was just installed to. It never boots the installed OS.
+	// applies. AllowNetboot is what the Hardware's netboot.allowPXE becomes
+	// once dhcp.Convert* has translated it into hardware.Info.
+	//
+	// Without this the route serves boot files forever: a machine that has
+	// just been provisioned reboots, the Workflow controller clears allowPXE
+	// (bootOptions.toggleAllowNetboot), and this route hands it the OSIE again
+	// instead of letting it fall through its BOOT_ORDER to the disk it was
+	// just installed to. It never boots the installed OS.
 	if !hw.AllowNetboot {
 		log.V(1).Info("hardware does not allow netboot; skipping")
 		return false, nil
