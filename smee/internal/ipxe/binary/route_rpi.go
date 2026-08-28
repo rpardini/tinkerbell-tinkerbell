@@ -70,13 +70,20 @@ func (r RPiNetbootRoute) TryServe(ctx context.Context, req Request, w io.ReaderF
 
 	suffix := req.Filename[len(rpi.SerialNum):]
 
-	// Compared cleaned, because the bootloader asks for each of these TWICE:
-	// once as "<serial>/config.txt" and again as "<serial>//config.txt", with a
-	// doubled slash. Both are the same request. An exact match on req.Filename
-	// answers only the first, and it is the second that the firmware acts on --
-	// when it misses, the Pi discards the config it was just served, probes the
-	// default kernel names (kernel_2712.img, kernel8.img, kernel8_rt.img), finds
-	// nothing and loops forever. Observed on a Pi 5 booting a custom OSIE.
+	// Compared cleaned, because the Raspberry Pi 5 bootloader asks for each of
+	// these TWICE: once as "<serial>/config.txt" and again as
+	// "<serial>//config.txt", with a doubled slash. Both are the same request.
+	// An exact match on req.Filename answers only the first, and it is the
+	// second that the firmware acts on -- when it misses, the Pi discards the
+	// config it was just served, probes the default kernel names
+	// (kernel_2712.img, kernel8.img, kernel8_rt.img), finds nothing and loops
+	// forever.
+	//
+	// This is observed behaviour of the Pi 5 bootloader specifically, seen on a
+	// Pi 5 booting a custom OSIE. It has not been observed on other models, and
+	// no such behaviour is documented by Raspberry Pi. Cleaning the comparison
+	// is a no-op for a client that only ever sends the single-slash form, so
+	// the route behaves identically for models that do not do this.
 	//
 	// The miss is close to invisible: this route simply returns handled=false,
 	// the router falls through, and the client gets a 404 for a file it has
