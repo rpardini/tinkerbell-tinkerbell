@@ -1,6 +1,8 @@
 name: For each commit and PR
 on:
   push:
+    paths-ignore:
+      - "smee/internal/ipxe/binary/file/script/**" # ignore iPXE build inputs
     branches:
       - "main"
     tags:
