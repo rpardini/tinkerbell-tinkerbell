@@ -470,16 +470,13 @@ clean-third-party-licenses: ## Remove the generated third-party license bundles
 lint: _lint  ## Run linting
 
 LINT_ARCH := $(shell uname -m)
-LINT_OS := $(shell uname)
-LINT_OS_LOWER := $(shell echo $(LINT_OS) | tr '[:upper:]' '[:lower:]')
 LINT_ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-# shellcheck and hadolint lack arm64 native binaries: rely on x86-64 emulation
-ifeq ($(LINT_OS),Darwin)
-	ifeq ($(LINT_ARCH),arm64)
-		LINT_ARCH=x86_64
-	endif
-endif
+# golangci-lint type-checks against the stdlib of whatever `go` is on PATH. A
+# prebuilt golangci-lint panics ("file requires newer Go version") when that Go
+# is newer than the one it was built with, e.g. a Homebrew Go ahead of CI's.
+# Pin the toolchain to the root go.mod's so local runs match CI.
+LINT_GOTOOLCHAIN := go$(shell sed -n 's/^go //p' $(LINT_ROOT)/go.mod)
 
 LINTERS :=
 FIXERS :=
@@ -494,11 +491,11 @@ $(GOLANGCI_LINT_BIN):
 
 LINTERS += golangci-lint-lint
 golangci-lint-lint: $(GOLANGCI_LINT_BIN)
-	find . -name go.mod -not -path "./out/*" -execdir sh -c '"$(GOLANGCI_LINT_BIN)" run --timeout 10m -c "$(GOLANGCI_LINT_CONFIG)"' '{}' '+'
+	find . -name go.mod -not -path "./out/*" -execdir sh -c 'GOTOOLCHAIN=$(LINT_GOTOOLCHAIN) "$(GOLANGCI_LINT_BIN)" run --timeout 10m -c "$(GOLANGCI_LINT_CONFIG)"' '{}' '+'
 
 FIXERS += golangci-lint-fix
 golangci-lint-fix: $(GOLANGCI_LINT_BIN)
-	find . -name go.mod -not -path "./out/*" -execdir "$(GOLANGCI_LINT_BIN)" run -c "$(GOLANGCI_LINT_CONFIG)" --fix \;
+	find . -name go.mod -not -path "./out/*" -execdir env GOTOOLCHAIN=$(LINT_GOTOOLCHAIN) "$(GOLANGCI_LINT_BIN)" run -c "$(GOLANGCI_LINT_CONFIG)" --fix \;
 
 .PHONY: _lint $(LINTERS)
 _lint: $(LINTERS)
