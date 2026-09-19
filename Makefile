@@ -165,20 +165,35 @@ out/tinkerbell: $(generated_go_files) $(TINKERBELL_SOURCES) ## Compile Tinkerbel
 
 cross-compile: $(crossbinaries) ## Compile for all architectures
 
-embeddedbinaries := out/tinkerbell-embedded-linux-amd64 out/tinkerbell-embedded-linux-arm64
-out/tinkerbell-embedded-linux-amd64: FLAGS=GOARCH=amd64
-out/tinkerbell-embedded-linux-arm64: FLAGS=GOARCH=arm64
-out/tinkerbell-embedded-linux-amd64 out/tinkerbell-embedded-linux-arm64: $(generated_go_files) $(TINKERBELL_SOURCES)
-	${FLAGS} CGO_ENABLED=0 GOOS=linux go build -tags "embedded" -ldflags="-s -w" -v -o $@ ./cmd/tinkerbell
-	if [ "${COMPRESS}" = "true" ]; then $(MAKE) $(UPX_FQP) && $(UPX_FQP) --best --lzma $@; fi
+# Embedded builds. The platform is encoded in the target name --
+# out/tinkerbell-embedded-<goos>-<goarch> -- and GOOS/GOARCH are derived from
+# the stem, so adding a platform means adding it to one of these lists.
+embedded_linux_platforms := linux-amd64 linux-arm64
+embedded_darwin_platforms := darwin-amd64 darwin-arm64
+embedded_platforms := $(embedded_linux_platforms) $(embedded_darwin_platforms)
 
-cross-compile-embedded: $(embeddedbinaries) ## Compile Tinkerbell for all architectures with embedded tags
-cross-compile-embedded-amd64: out/tinkerbell-embedded-linux-amd64 ## Compile embedded Tinkerbell for amd64
-cross-compile-embedded-arm64: out/tinkerbell-embedded-linux-arm64 ## Compile embedded Tinkerbell for arm64
+# cross-compile-embedded and the checksums stay Linux-only: those are the
+# release artifacts, and .github/workflows/ci.yaml uploads them by name. The
+# darwin builds are for local use, so they are opt-in per target.
+embeddedbinaries := $(addprefix out/tinkerbell-embedded-,$(embedded_linux_platforms))
+
+# COMPRESS applies to the Linux builds only: UPX cannot pack arm64 Mach-O, and
+# a packed binary fails macOS code signing.
+$(addprefix out/tinkerbell-embedded-,$(embedded_platforms)): out/tinkerbell-embedded-%: $(generated_go_files) $(TINKERBELL_SOURCES)
+	GOOS=$(firstword $(subst -, ,$*)) GOARCH=$(lastword $(subst -, ,$*)) CGO_ENABLED=0 go build -tags "embedded" -ldflags="-s -w" -v -o $@ ./cmd/tinkerbell
+	if [ "${COMPRESS}" = "true" ] && [ "$(firstword $(subst -, ,$*))" = "linux" ]; then $(MAKE) $(UPX_FQP) && $(UPX_FQP) --best --lzma $@; fi
+
+cross-compile-embedded: $(embeddedbinaries) ## Compile Tinkerbell for all Linux architectures with embedded tags
+cross-compile-embedded-amd64: out/tinkerbell-embedded-linux-amd64 ## Compile embedded Tinkerbell for amd64 (Linux)
+cross-compile-embedded-arm64: out/tinkerbell-embedded-linux-arm64 ## Compile embedded Tinkerbell for arm64 (Linux)
+cross-compile-embedded-amd64-linux: out/tinkerbell-embedded-linux-amd64 ## Compile embedded Tinkerbell for amd64 (Linux)
+cross-compile-embedded-arm64-linux: out/tinkerbell-embedded-linux-arm64 ## Compile embedded Tinkerbell for arm64 (Linux)
+cross-compile-embedded-amd64-darwin: out/tinkerbell-embedded-darwin-amd64 ## Compile embedded Tinkerbell for amd64 (macOS)
+cross-compile-embedded-arm64-darwin: out/tinkerbell-embedded-darwin-arm64 ## Compile embedded Tinkerbell for arm64 (macOS)
 
 checksums-embedded: out/checksums-embedded.txt ## Generate checksums for the cross-compiled binaries
-out/checksums-embedded.txt: out/tinkerbell-embedded-linux-amd64 out/tinkerbell-embedded-linux-arm64
-	(cd out; sha256sum tinkerbell-embedded-linux-amd64 tinkerbell-embedded-linux-arm64 > checksums-embedded.txt)
+out/checksums-embedded.txt: $(embeddedbinaries)
+	(cd out; sha256sum $(notdir $(embeddedbinaries)) > checksums-embedded.txt)
 
 AGENT_SOURCES := $(shell find $(go list -deps ./cmd/agent | grep -i tinkerbell | cut -d"/" -f 4-) -type f -name '*.go')
 
