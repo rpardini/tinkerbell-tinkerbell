@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -9,15 +10,16 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	tlog "github.com/tinkerbell/tinkerbell/pkg/log"
 )
 
 // getLogger returns a logger based on the configuration.
 // If level is negative, returns a logger that discards all output.
-func getLogger(level int) logr.Logger {
+func getLogger(level int, color tlog.Mode) logr.Logger {
 	if level < 0 {
 		return logr.Discard()
 	}
-	return defaultLogger(level)
+	return defaultLogger(level, color)
 }
 
 // k8sAPIWarningLogger routes client-go API server warning headers (HTTP code
@@ -37,7 +39,7 @@ func (w k8sAPIWarningLogger) HandleWarningHeader(code int, agent string, message
 }
 
 // defaultLogger uses the slog logr implementation.
-func defaultLogger(level int) logr.Logger {
+func defaultLogger(level int, color tlog.Mode) logr.Logger {
 	// source file and function can be long. This makes the logs less readable.
 	// for improved readability, truncate source file to last 3 parts and remove the function entirely.
 	customAttr := func(_ []string, a slog.Attr) slog.Attr {
@@ -95,7 +97,11 @@ func defaultLogger(level int) logr.Logger {
 		Level:       slog.Level(-level),
 		ReplaceAttr: customAttr,
 	}
-	log := slog.New(slog.NewJSONHandler(os.Stdout, opts))
+	var out io.Writer = os.Stdout
+	if color.Enabled(os.Stdout) {
+		out = tlog.NewColorWriter(os.Stdout)
+	}
+	log := slog.New(slog.NewJSONHandler(out, opts))
 
 	return logr.FromSlogHandler(log.Handler())
 }
