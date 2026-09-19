@@ -7,10 +7,12 @@ import (
 	"github.com/tinkerbell/tinkerbell/pkg/constant"
 	"github.com/tinkerbell/tinkerbell/pkg/flag/delimitedlist"
 	ntip "github.com/tinkerbell/tinkerbell/pkg/flag/netip"
+	tlog "github.com/tinkerbell/tinkerbell/pkg/log"
 )
 
 type GlobalConfig struct {
 	LogLevel             int
+	LogColor             tlog.Mode
 	Backend              string
 	BackendFilePath      string
 	BackendKubeConfig    string
@@ -93,6 +95,7 @@ func RegisterGlobal(fs *Set, gc *GlobalConfig) {
 	fs.Register(EnableUI, ffval.NewValueDefault(&gc.EnableUI, gc.EnableUI))
 	fs.Register(EnableCRDMigrations, ffval.NewValueDefault(&gc.EnableCRDMigrations, gc.EnableCRDMigrations))
 	fs.Register(LogLevelConfig, ffval.NewValueDefault(&gc.LogLevel, gc.LogLevel))
+	fs.Register(LogColorConfig, &gc.LogColor)
 	fs.Register(OTELEndpoint, ffval.NewValueDefault(&gc.OTELEndpoint, gc.OTELEndpoint))
 	fs.Register(OTELInsecure, ffval.NewValueDefault(&gc.OTELInsecure, gc.OTELInsecure))
 	fs.RegisterFamily(PublicIP, V4, &ntip.Addr{Addr: &gc.PublicIP})
@@ -114,6 +117,11 @@ func RegisterEmbeddedGlobals(fs *Set, gc *GlobalConfig) {
 var LogLevelConfig = Config{
 	Name:  "log-level",
 	Usage: "the higher the number the more verbose, a negative number disables logging",
+}
+
+var LogColorConfig = Config{
+	Name:  "log-color",
+	Usage: "colorize the JSON logs: auto (only when stdout is a terminal), always, never. FORCE_COLOR and NO_COLOR are honoured in auto, FORCE_COLOR winning",
 }
 
 // BackendConfig flags.
