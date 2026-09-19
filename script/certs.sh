@@ -16,33 +16,53 @@ function usage() {
 certs_dir=$(pwd)/certs
 apiserver_ip="localhost"
 
-args=$(getopt -a -o i:d:h --long i:,dir:,help -- "$@")
-if [[ $? -gt 0 ]]; then
-  usage
-fi
-
-eval set -- ${args}
-while :
-do
+# Options are parsed by hand rather than with getopt(1): macOS ships the BSD
+# implementation, which has neither -a nor --long, so the GNU getopt call this
+# replaced died immediately there with "getopt: illegal option -- o". There are
+# three options, so parsing them directly is less trouble than depending on
+# `brew install gnu-getopt` -- which is keg-only, and so would also need its
+# own PATH handling in every caller.
+#
+# Both "--dir value" and "--dir=value" are accepted, as GNU getopt allowed.
+while [[ $# -gt 0 ]]; do
   case $1 in
     -i | --apiserver)
-      if [[ ! -z $2 ]]; then
-        apiserver_ip=$2
+      # Consume the value if there is one, but keep the default when it is
+      # empty. Guarding on $# means a trailing "-i" does not shift past the
+      # end of the arguments, which would fail under `set -u`.
+      if [[ $# -ge 2 ]]; then
+        if [[ -n $2 ]]; then
+          apiserver_ip=$2
+        fi
+        shift
       fi
-      shift 2 ;;
+      shift ;;
+    --apiserver=*)
+      if [[ -n ${1#*=} ]]; then
+        apiserver_ip=${1#*=}
+      fi
+      shift ;;
     -d | --dir)
-      if [[ ! -z $2 ]]; then
-        certs_dir=$2
+      if [[ $# -ge 2 ]]; then
+        if [[ -n $2 ]]; then
+          certs_dir=$2
+        fi
+        shift
       fi
-      shift 2 ;;
+      shift ;;
+    --dir=*)
+      if [[ -n ${1#*=} ]]; then
+        certs_dir=${1#*=}
+      fi
+      shift ;;
     -h | --help)
       usage
-      exit 1
-      shift ;;
+      exit 1 ;;
     # -- means the end of the arguments; drop this, and break out of the while loop
     --) shift; break ;;
-    *) >&2 echo Unsupported option: $1
-       usage ;;
+    *) >&2 echo "Unsupported option: $1"
+       usage
+       exit 1 ;;
   esac
 done
 
