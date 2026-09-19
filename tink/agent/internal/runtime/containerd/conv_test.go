@@ -18,6 +18,25 @@ const (
 	roOption    = "ro"
 )
 
+// tempDirResolved is t.TempDir() with symlinks resolved.
+//
+// On macOS the per-test temp dir lives under /var/folders/..., and /var is a
+// symlink to /private/var. The code under test resolves paths -- filepath.Abs
+// goes through os.Getwd, which returns the real path, and addrHash calls
+// filepath.EvalSymlinks outright -- so a test comparing against the raw
+// t.TempDir() value compares /var/... against /private/var/... and fails.
+// Resolving here keeps the expectation in the same form the code produces; on
+// Linux, where the temp dir is not behind a symlink, it is a no-op.
+func tempDirResolved(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolve temp dir: %v", err)
+	}
+
+	return dir
+}
+
 func TestParseVolume(t *testing.T) {
 	log := logr.Discard()
 
@@ -260,7 +279,7 @@ func TestParseVolumes(t *testing.T) {
 
 	t.Run("resolves relative source to absolute", func(t *testing.T) {
 		// Create a temp dir and chdir into it so relative paths resolve there.
-		base := t.TempDir()
+		base := tempDirResolved(t)
 		orig, err := os.Getwd()
 		if err != nil {
 			t.Fatal(err)
@@ -320,7 +339,7 @@ func TestEnsureBindMountSource(t *testing.T) {
 	})
 
 	t.Run("relative path resolved to absolute", func(t *testing.T) {
-		base := t.TempDir()
+		base := tempDirResolved(t)
 		orig, err := os.Getwd()
 		if err != nil {
 			t.Fatal(err)
