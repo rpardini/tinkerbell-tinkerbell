@@ -43,6 +43,40 @@ func Execute(ctx context.Context, cancel context.CancelFunc, args []string) erro
 	return executeWithOutput(ctx, cancel, args, os.Stdout)
 }
 
+// runService runs fn as one of g's goroutines and reports a failure the moment
+// it happens, rather than leaving it to the error g.Wait() eventually returns.
+//
+// That is deliberate, not belt-and-braces. A failing service cancels the group,
+// which shuts every other service down, and the embedded kube-controller-manager's
+// OnStoppedLeading callback calls klog.FlushAndExit -- os.Exit(1) -- the moment it
+// loses its lease. That kills the process before g.Wait() returns, so the real
+// error never reaches Execute's caller and the operator is left with a bare
+// "exit status 1" whose final log line is an unrelated complaint about leader
+// election. Logging at the source wins that race: the reason is out before the
+// cascade can start.
+//
+// context.Canceled is the ordinary shutdown path, not a failure.
+func runService(ctx context.Context, g *errgroup.Group, log logr.Logger, name string, fn func() error) {
+	g.Go(func() error {
+		err := fn()
+		if err == nil || errors.Is(err, context.Canceled) {
+			return err
+		}
+		// Only the service that fails first gets to explain itself. errgroup
+		// cancels ctx after this function returns, so ctx is still live for the
+		// original failure and already cancelled for every service that is
+		// merely being torn down behind it -- those report whatever they were
+		// in the middle of (a half-finished retry, a closed connection), which
+		// is noise that would bury the real reason.
+		if ctx.Err() != nil {
+			return err
+		}
+		log.Error(err, "service failed, shutting down Tinkerbell", "service", name)
+
+		return err
+	})
+}
+
 // executeWithOutput allows command output to be captured in tests.
 func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []string, stdout io.Writer) error { //nolint:cyclop,gocognit // Will need to look into reducing the cyclomatic and cognitive complexity.
 	startTime := time.Now() // used in the HTTP healthcheck handler to report uptime.
@@ -290,7 +324,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 
 	g, ctx := errgroup.WithContext(ctx)
 	// Etcd server
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "etcd", func() error {
 		if !globals.EmbeddedGlobalConfig.EnableETCD {
 			cliLog.Info("embedded etcd is disabled")
 			return nil
@@ -309,7 +343,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 	})
 
 	// API Server
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "kube-apiserver", func() error {
 		if !globals.EmbeddedGlobalConfig.EnableKubeAPIServer {
 			cliLog.Info("embedded kube-apiserver is disabled")
 			return nil
@@ -385,7 +419,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 	}
 
 	// Kube Controller Manager
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "kube-controller-manager", func() error {
 		if !globals.EmbeddedGlobalConfig.EnableKubeAPIServer {
 			cliLog.Info("embedded kube-controller-manager is disabled")
 			return nil
@@ -404,7 +438,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 	}
 
 	// Smee (non-HTTP services: DHCP, TFTP, syslog)
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "smee", func() error {
 		if !globals.EnableSmee {
 			cliLog.Info("smee service is disabled")
 			return nil
@@ -419,12 +453,12 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 	})
 
 	// HTTP server
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "http", func() error {
 		return startHTTPServer(ctx, globals, s, h, uic, startTime)
 	})
 
 	// Tink Server
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "tink-server", func() error {
 		if !globals.EnableTinkServer {
 			cliLog.Info("tink server service is disabled")
 			return nil
@@ -437,7 +471,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 	})
 
 	// Tink Controller
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "tink-controller", func() error {
 		if !globals.EnableTinkController {
 			cliLog.Info("tink controller service is disabled")
 			return nil
@@ -450,7 +484,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 	})
 
 	// Rufio Controller
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "rufio", func() error {
 		if !globals.EnableRufio {
 			cliLog.Info("rufio service is disabled")
 			return nil
@@ -463,7 +497,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 	})
 
 	// SecondStar
-	g.Go(func() error {
+	runService(ctx, g, cliLog, "secondstar", func() error {
 		if !globals.EnableSecondStar {
 			cliLog.Info("secondstar service is disabled")
 			return nil
