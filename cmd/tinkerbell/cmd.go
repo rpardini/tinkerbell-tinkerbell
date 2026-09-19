@@ -177,7 +177,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 		globals.BindAddr = defaultBindAddr(publicIP, publicIPv6)
 	}
 
-	log := getLogger(globals.LogLevel)
+	log := getLogger(globals.LogLevel, globals.LogColor)
 
 	// klog (client-go and other Kubernetes libraries) and controller-runtime
 	// both log through process-global loggers for code paths that aren't handed
@@ -410,7 +410,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 			return nil
 		}
 		ll := ternary((s.LogLevel != 0), s.LogLevel, globals.LogLevel)
-		smeeLog := getLogger(ll).WithName("smee")
+		smeeLog := getLogger(ll, globals.LogColor).WithName("smee")
 
 		if err := s.Config.Start(ctx, smeeLog); err != nil {
 			return fmt.Errorf("failed to start smee service: %w", err)
@@ -430,7 +430,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 			return nil
 		}
 		ll := ternary((ts.LogLevel != 0), ts.LogLevel, globals.LogLevel)
-		if err := ts.Config.Start(ctx, getLogger(ll).WithName("tink-server")); err != nil {
+		if err := ts.Config.Start(ctx, getLogger(ll, globals.LogColor).WithName("tink-server")); err != nil {
 			return fmt.Errorf("failed to start tink server service: %w", err)
 		}
 		return nil
@@ -443,7 +443,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 			return nil
 		}
 		ll := ternary((tc.LogLevel != 0), tc.LogLevel, globals.LogLevel)
-		if err := tc.Config.Start(ctx, getLogger(ll).WithName("tink-controller")); err != nil {
+		if err := tc.Config.Start(ctx, getLogger(ll, globals.LogColor).WithName("tink-controller")); err != nil {
 			return fmt.Errorf("failed to start tink controller service: %w", err)
 		}
 		return nil
@@ -456,7 +456,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 			return nil
 		}
 		ll := ternary((rc.LogLevel != 0), rc.LogLevel, globals.LogLevel)
-		if err := rc.Config.Start(ctx, getLogger(ll).WithName("rufio")); err != nil {
+		if err := rc.Config.Start(ctx, getLogger(ll, globals.LogColor).WithName("rufio")); err != nil {
 			return fmt.Errorf("failed to start rufio service: %w", err)
 		}
 		return nil
@@ -469,7 +469,7 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 			return nil
 		}
 		ll := ternary((ssc.LogLevel != 0), ssc.LogLevel, globals.LogLevel)
-		if err := ssc.Config.Start(ctx, getLogger(ll).WithName("secondstar")); err != nil {
+		if err := ssc.Config.Start(ctx, getLogger(ll, globals.LogColor).WithName("secondstar")); err != nil {
 			return fmt.Errorf("failed to start secondstar service: %w", err)
 		}
 		return nil
