@@ -10,12 +10,14 @@ import (
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/ffval"
 	"github.com/tinkerbell/tinkerbell/pkg/flag/netip"
+	tlog "github.com/tinkerbell/tinkerbell/pkg/log"
 	"github.com/tinkerbell/tinkerbell/tink/agent"
 )
 
 type config struct {
 	AgentID      string
 	LogLevel     int
+	LogColor     tlog.Mode
 	PrintVersion bool
 	Options      *agent.Options
 }
@@ -103,6 +105,7 @@ func RegisterAllFlags(c *config) *ff.FlagSet {
 func RegisterRootFlags(c *config, fs *flag.FlagSet) {
 	fs.StringVar(&c.AgentID, "id", "", "ID of the agent")
 	fs.IntVar(&c.LogLevel, "log-level", 0, "Log level")
+	fs.Var(&c.LogColor, "log-color", "Colorize the JSON logs: auto (only when stdout is a terminal), always, never. FORCE_COLOR and NO_COLOR are honoured in auto, FORCE_COLOR winning")
 	fs.BoolVar(&c.PrintVersion, "version", false, "Print the version and exit")
 	fs.Var(&c.Options.RuntimeSelected, "runtime", fmt.Sprintf("Container runtime used to run Actions, must be one of [%s, %s, %s]", agent.DockerRuntimeType, agent.ContainerdRuntimeType, agent.KubernetesRuntimeType))
 	fs.Var(&c.Options.TransportSelected, "transport", fmt.Sprintf("Transport used to receive Workflows/Actions and to send results, must be one of [%s, %s, %s]", agent.GRPCTransportType, agent.NATSTransportType, agent.FileTransportType))

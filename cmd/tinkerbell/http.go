@@ -44,14 +44,14 @@ const (
 // startHTTPServer registers all HTTP/HTTPS routes, applies middleware, and
 // starts the consolidated HTTP server. It blocks until ctx is cancelled.
 func startHTTPServer(ctx context.Context, globals *flag.GlobalConfig, s *flag.SmeeConfig, h *flag.TootlesConfig, uic *flag.UIConfig, startTime time.Time) error {
-	httpLog := getLogger(globals.LogLevel).WithName("http")
+	httpLog := getLogger(globals.LogLevel, globals.LogColor).WithName("http")
 	routeList := &httpserver.Routes{}
 	tlsEnabled := len(s.Config.TLS.Certs) > 0
 
 	// Smee HTTP handlers
 	if globals.EnableSmee {
 		ll := ternary((s.LogLevel != 0), s.LogLevel, globals.LogLevel)
-		smeeLog := getLogger(ll).WithName("smee")
+		smeeLog := getLogger(ll, globals.LogColor).WithName("smee")
 
 		if bh := s.Config.BinaryHandler(smeeLog); bh != nil {
 			routeList.Register(routeIPXEBinary,
@@ -119,7 +119,7 @@ func startHTTPServer(ctx context.Context, globals *flag.GlobalConfig, s *flag.Sm
 	// UI HTTP handler
 	if globals.EnableUI {
 		ll := ternary((uic.LogLevel != 0), uic.LogLevel, globals.LogLevel)
-		uiLog := getLogger(ll).WithName("ui")
+		uiLog := getLogger(ll, globals.LogColor).WithName("ui")
 
 		uiHandler, err := uic.Config.Handler(uiLog)
 		if err != nil {
