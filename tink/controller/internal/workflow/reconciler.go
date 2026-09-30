@@ -158,7 +158,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		resp, err := s.prepareWorkflow(ctx)
 		perr := mergePatchStatus(ctx, r.client, stored, s.workflow)
 		if perr == nil {
-			r.recordFinalState(stored, s.workflow, eventActionPrepare, err)
+			r.recordFinalState(ctx, stored, s.workflow, eventActionPrepare, err)
 		}
 
 		return resp, errors.Join(err, perr)
@@ -172,7 +172,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			if err := mergePatchStatus(ctx, r.client, stored, wflow); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.recordFinalState(stored, wflow, eventActionRun, fmt.Errorf("global timeout of %ds reached", wflow.Status.GlobalTimeout))
+			r.recordFinalState(ctx, stored, wflow, eventActionRun, fmt.Errorf("global timeout of %ds reached", wflow.Status.GlobalTimeout))
 			return reconcile.Result{}, nil
 		}
 
@@ -209,7 +209,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		rc, err := s.postActions(ctx)
 		perr := mergePatchStatus(ctx, r.client, stored, wflow)
 		if perr == nil {
-			r.recordFinalState(stored, wflow, eventActionPost, err)
+			r.recordFinalState(ctx, stored, wflow, eventActionPost, err)
 		}
 
 		return rc, errors.Join(err, perr)
@@ -230,7 +230,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 // recordFinalState records an Event when a reconcile has moved the Workflow into a final state.
 // Transitions driven by Agents (running, and failures of Actions) are recorded by the Tink Server.
-func (r *Reconciler) recordFinalState(original, updated *v1alpha1.Workflow, action string, cause error) {
+func (r *Reconciler) recordFinalState(ctx context.Context, original, updated *v1alpha1.Workflow, action string, cause error) {
 	if r.recorder == nil || original.Status.State == updated.Status.State {
 		return
 	}
@@ -238,15 +238,27 @@ func (r *Reconciler) recordFinalState(original, updated *v1alpha1.Workflow, acti
 	if cause != nil {
 		why = ": " + cause.Error()
 	}
+	var eventtype, reason, note string
 	switch updated.Status.State {
 	case v1alpha1.WorkflowStateSuccess:
-		r.recorder.Eventf(updated, nil, corev1.EventTypeNormal, eventReasonWorkflowSucceeded, action, "Workflow completed successfully")
+		eventtype, reason, note = corev1.EventTypeNormal, eventReasonWorkflowSucceeded, "Workflow completed successfully"
 	case v1alpha1.WorkflowStateFailed:
-		r.recorder.Eventf(updated, nil, corev1.EventTypeWarning, eventReasonWorkflowFailed, action, "Workflow failed%s", why)
+		eventtype, reason, note = corev1.EventTypeWarning, eventReasonWorkflowFailed, "Workflow failed"+why
 	case v1alpha1.WorkflowStateTimeout:
-		r.recorder.Eventf(updated, nil, corev1.EventTypeWarning, eventReasonWorkflowTimedOut, action, "Workflow timed out%s", why)
+		eventtype, reason, note = corev1.EventTypeWarning, eventReasonWorkflowTimedOut, "Workflow timed out"+why
 	default:
+		return
 	}
+	// Recorded against the Hardware the Workflow runs on, so a machine's history is in one place,
+	// with the Workflow as the related object. Falls back to the Workflow if there's no Hardware.
+	if updated.Spec.HardwareRef != "" {
+		hw := &v1alpha1.Hardware{}
+		if err := r.client.Get(ctx, ctrlclient.ObjectKey{Name: updated.Spec.HardwareRef, Namespace: updated.Namespace}, hw); err == nil {
+			r.recorder.Eventf(hw, updated, eventtype, reason, action, "Workflow %s: %s", updated.Name, note)
+			return
+		}
+	}
+	r.recorder.Eventf(updated, nil, eventtype, reason, action, "%s", note)
 }
 
 // mergePatchStatus merges an updated Workflow with an original Workflow and patches the Status object via the client (cc).

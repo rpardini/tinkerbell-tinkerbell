@@ -527,7 +527,7 @@ func (h *Handler) doReportActionStatus(ctx context.Context, req *proto.ActionSta
 				if err := h.Backend.UpdateWorkflow(ctx, wf, data.UpdateOptions{StatusOnly: true}); err != nil {
 					return nil, status.Errorf(codes.Internal, "error writing report status: %v", err)
 				}
-				h.recordStateChange(wf, previousState)
+				h.recordStateChange(ctx, wf, previousState)
 				return &proto.ActionStatusResponse{}, nil
 			}
 		}
@@ -539,23 +539,32 @@ func (h *Handler) doReportActionStatus(ctx context.Context, req *proto.ActionSta
 // recordStateChange records an Event when an Agent's report has moved the Workflow into running,
 // failed or timed out. Success is recorded by the Workflow controller, which owns the transition
 // out of the post-actions state.
-func (h *Handler) recordStateChange(wf *tinkerbell.Workflow, previous tinkerbell.WorkflowState) {
+func (h *Handler) recordStateChange(ctx context.Context, wf *tinkerbell.Workflow, previous tinkerbell.WorkflowState) {
 	if h.EventRecorder == nil || wf.Status.State == previous || wf.Status.CurrentState == nil {
 		return
 	}
+	var eventtype, reason, note string
 	cs := wf.Status.CurrentState
 	switch wf.Status.State {
 	case tinkerbell.WorkflowStateRunning:
-		h.EventRecorder.Eventf(wf, nil, corev1.EventTypeNormal, eventReasonWorkflowStarted, eventActionRunAction,
-			"Agent %s started Action %q of Task %q", cs.AgentID, cs.ActionName, cs.TaskName)
+		eventtype, reason = corev1.EventTypeNormal, eventReasonWorkflowStarted
+		note = fmt.Sprintf("Agent %s started Action %q of Task %q", cs.AgentID, cs.ActionName, cs.TaskName)
 	case tinkerbell.WorkflowStateFailed:
-		h.EventRecorder.Eventf(wf, nil, corev1.EventTypeWarning, eventReasonWorkflowFailed, eventActionRunAction,
-			"Action %q of Task %q failed on Agent %s: %s", cs.ActionName, cs.TaskName, cs.AgentID, actionMessage(wf, cs))
+		eventtype, reason = corev1.EventTypeWarning, eventReasonWorkflowFailed
+		note = fmt.Sprintf("Action %q of Task %q failed on Agent %s: %s", cs.ActionName, cs.TaskName, cs.AgentID, actionMessage(wf, cs))
 	case tinkerbell.WorkflowStateTimeout:
-		h.EventRecorder.Eventf(wf, nil, corev1.EventTypeWarning, eventReasonWorkflowTimedOut, eventActionRunAction,
-			"Action %q of Task %q timed out on Agent %s: %s", cs.ActionName, cs.TaskName, cs.AgentID, actionMessage(wf, cs))
+		eventtype, reason = corev1.EventTypeWarning, eventReasonWorkflowTimedOut
+		note = fmt.Sprintf("Action %q of Task %q timed out on Agent %s: %s", cs.ActionName, cs.TaskName, cs.AgentID, actionMessage(wf, cs))
 	default:
+		return
 	}
+	// Recorded against the Hardware the Workflow runs on, so a machine's history is in one place,
+	// with the Workflow as the related object. Falls back to the Workflow if there's no Hardware.
+	if hw := h.resolveHardware(ctx, nil, wf.Spec.HardwareRef, wf.Namespace); hw != nil {
+		h.EventRecorder.Eventf(hw, wf, eventtype, reason, eventActionRunAction, "Workflow %s: %s", wf.Name, note)
+		return
+	}
+	h.EventRecorder.Eventf(wf, nil, eventtype, reason, eventActionRunAction, "%s", note)
 }
 
 // actionMessage returns the message the Agent reported for the current Action.

@@ -42,7 +42,7 @@ func TestRouteEvents(t *testing.T) {
 			route:    pxelinuxRoute(mac),
 			hw:       denied,
 			filename: "pxelinux.cfg/01-00-01-02-03-04-05",
-			want:     []string{"Warning NetbootNotAllowed pxelinux.cfg/01-00-01-02-03-04-05 refused, netboot.allowPXE is false"},
+			want:     []string{"Normal NetbootNotAllowed pxelinux.cfg/01-00-01-02-03-04-05 not served, netboot.allowPXE is false"},
 		},
 		"pxelinux without a Hardware object records nothing": {
 			route:    pxelinuxRoute(mac),
@@ -64,7 +64,7 @@ func TestRouteEvents(t *testing.T) {
 			route:    rpiRoute(clientIP),
 			hw:       denied,
 			filename: serial + "/config.txt",
-			want:     []string{"Warning NetbootNotAllowed RPi netboot file " + serial + "/config.txt refused, netboot.allowPXE is false"},
+			want:     []string{"Normal NetbootNotAllowed RPi netboot file " + serial + "/config.txt not served, netboot.allowPXE is false"},
 		},
 		"rpi not allowed for a non-RPi file records nothing": {
 			route:    rpiRoute(clientIP),

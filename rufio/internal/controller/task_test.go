@@ -3,18 +3,23 @@ package controller_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/tinkerbell/tinkerbell/api/v1alpha1/bmc"
+	"github.com/tinkerbell/tinkerbell/api/v1alpha1/tinkerbell"
 	"github.com/tinkerbell/tinkerbell/rufio/internal/controller"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -385,6 +390,101 @@ func TestTaskReconcileEvents(t *testing.T) {
 			}
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Fatalf("unexpected events (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+// capturingRecorder is an events.EventRecorder that keeps each Event's regarding and related
+// object as "<kind>/<name>", "-" standing in for a nil related object.
+type capturingRecorder struct{ targets []string }
+
+func (c *capturingRecorder) Eventf(regarding, related runtime.Object, _, _, _, _ string, _ ...any) {
+	name := func(o runtime.Object) string {
+		if o == nil {
+			return "-"
+		}
+		return fmt.Sprintf("%T/%s", o, o.(metav1.Object).GetName())
+	}
+	c.targets = append(c.targets, name(regarding)+" "+name(related))
+}
+
+func TestTaskEventTarget(t *testing.T) {
+	hwLinkedTo := func(name, machine string) *tinkerbell.Hardware {
+		return &tinkerbell.Hardware{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default"},
+			Spec:       tinkerbell.HardwareSpec{BMCRef: &corev1.TypedLocalObjectReference{Kind: "Machine", Name: machine}},
+		}
+	}
+	tests := map[string]struct {
+		owned    bool
+		hardware []client.Object
+		// unindexed makes field-selector Lists fail, as they do when inventory collection is disabled.
+		unindexed bool
+		want      string
+	}{
+		"linked Hardware": {
+			owned:    true,
+			hardware: []client.Object{hwLinkedTo("hw1", "machine1"), hwLinkedTo("other", "machine2")},
+			want:     "*tinkerbell.Hardware/hw1 *bmc.Task/events",
+		},
+		"linked Hardware without the field index": {
+			owned:     true,
+			hardware:  []client.Object{hwLinkedTo("hw1", "machine1"), hwLinkedTo("other", "machine2")},
+			unindexed: true,
+			want:      "*tinkerbell.Hardware/hw1 *bmc.Task/events",
+		},
+		"no linked Hardware falls back to the Machine": {
+			owned:    true,
+			hardware: []client.Object{hwLinkedTo("other", "machine2")},
+			want:     "*bmc.Machine/machine1 *bmc.Task/events",
+		},
+		"ambiguous Hardware falls back to the Machine": {
+			owned:    true,
+			hardware: []client.Object{hwLinkedTo("hw1", "machine1"), hwLinkedTo("hw2", "machine1")},
+			want:     "*bmc.Machine/machine1 *bmc.Task/events",
+		},
+		"no owning Job falls back to the Task": {
+			want: "*bmc.Task/events -",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			secret := createSecret()
+			task := createTask("events", getAction("PowerOn"), secret)
+			objs := []client.Object{task, secret}
+			objs = append(objs, tt.hardware...)
+			if tt.owned {
+				job := &bmc.Job{
+					ObjectMeta: metav1.ObjectMeta{Name: "job1", Namespace: "default"},
+					Spec:       bmc.JobSpec{MachineRef: bmc.MachineRef{Name: "machine1", Namespace: "default"}},
+				}
+				machine := &bmc.Machine{ObjectMeta: metav1.ObjectMeta{Name: "machine1", Namespace: "default"}}
+				task.OwnerReferences = []metav1.OwnerReference{{APIVersion: bmc.GroupVersion.String(), Kind: "Job", Name: job.Name}}
+				objs = append(objs, job, machine)
+			}
+			c := newClientBuilder().WithObjects(objs...).Build()
+			if tt.unindexed {
+				c = interceptor.NewClient(c, interceptor.Funcs{
+					List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						lo := &client.ListOptions{}
+						lo.ApplyOptions(opts)
+						if lo.FieldSelector != nil && !lo.FieldSelector.Empty() {
+							return errors.New("index does not exist")
+						}
+						return c.List(ctx, list, opts...)
+					},
+				})
+			}
+			recorder := &capturingRecorder{}
+			reconciler := controller.NewTaskReconciler(c, recorder, newTestClient(&testProvider{Powerstate: "on", PowerSetOK: true}))
+
+			if _, err := reconciler.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: task.Namespace, Name: task.Name}}); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff([]string{tt.want}, recorder.targets); diff != "" {
+				t.Fatalf("unexpected event target (-want +got):\n%s", diff)
 			}
 		})
 	}

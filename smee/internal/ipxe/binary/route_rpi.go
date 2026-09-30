@@ -79,7 +79,7 @@ func (r RPiNetbootRoute) TryServe(ctx context.Context, req Request, w io.ReaderF
 		// Only record it for a request that is actually for this Pi's files: this route is
 		// consulted for every TFTP request from the client, not just RPi netboot ones.
 		if hw.RPI.SerialNum != "" && strings.HasPrefix(req.Filename, hw.RPI.SerialNum+"/") {
-			hardware.Warning(r.Recorder, hw, hardware.ReasonNetbootNotAllowed, "RPi netboot file %s refused, netboot.allowPXE is false", req.Filename)
+			hardware.Normal(r.Recorder, hw, hardware.ReasonNetbootNotAllowed, "RPi netboot file %s not served, netboot.allowPXE is false", req.Filename)
 		}
 		return false, netbootNotAllowedForIP(req.Client.IP)
 	}
