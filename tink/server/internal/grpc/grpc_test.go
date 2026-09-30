@@ -763,6 +763,48 @@ func TestGetActionHardwareAttributes(t *testing.T) {
 			},
 			wantNoHWUpdate: true,
 		},
+		"first action with no Hardware agentID falls back to matching an interface MAC": {
+			workflow: baseWorkflow("my-hw"),
+			hardware: &tinkerbell.Hardware{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-hw",
+					Namespace: "default",
+				},
+				Spec: tinkerbell.HardwareSpec{
+					Interfaces: []tinkerbell.Interface{
+						{DHCP: &tinkerbell.DHCP{MAC: "de:ad:be:ef:00:01"}},
+						{DHCP: &tinkerbell.DHCP{MAC: "MACHINE-MAC-1"}},
+					},
+				},
+			},
+			request: &proto.ActionRequest{
+				AgentId:         toPtr("machine-mac-1"),
+				AgentAttributes: &proto.AgentAttributes{Cpu: &proto.CPU{TotalCores: toPtr(uint32(4))}},
+			},
+			wantAnnotation: true,
+			wantInBand:     true,
+		},
+		"first action with no Hardware agentID and no matching interface MAC must not apply inBand": {
+			workflow: baseWorkflow("my-hw"),
+			hardware: &tinkerbell.Hardware{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-hw",
+					Namespace: "default",
+				},
+				Spec: tinkerbell.HardwareSpec{
+					Interfaces: []tinkerbell.Interface{
+						{DHCP: &tinkerbell.DHCP{MAC: "de:ad:be:ef:00:01"}},
+						{},
+					},
+				},
+			},
+			request: &proto.ActionRequest{
+				AgentId:         toPtr("machine-mac-1"),
+				AgentAttributes: &proto.AgentAttributes{Cpu: &proto.CPU{TotalCores: toPtr(uint32(4))}},
+			},
+			wantAnnotation: true,
+			wantInBand:     false,
+		},
 		"first action but calling Agent is not the Hardware's own Agent": {
 			workflow: baseWorkflow("my-hw"),
 			hardware: &tinkerbell.Hardware{
@@ -1633,6 +1675,35 @@ func TestReportActionStatusEvents(t *testing.T) {
 			}
 			if diff := cmp.Diff(want, recorder.events); diff != "" {
 				t.Fatalf("unexpected events (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestIsHardwareOwnAgent(t *testing.T) {
+	withMAC := func(agentID string, macs ...string) *tinkerbell.Hardware {
+		hw := &tinkerbell.Hardware{Spec: tinkerbell.HardwareSpec{AgentID: agentID}}
+		for _, m := range macs {
+			hw.Spec.Interfaces = append(hw.Spec.Interfaces, tinkerbell.Interface{DHCP: &tinkerbell.DHCP{MAC: m}})
+		}
+		return hw
+	}
+	cases := map[string]struct {
+		hw      *tinkerbell.Hardware
+		agentID string
+		want    bool
+	}{
+		"agentID set and matches":                     {hw: withMAC("agent-1"), agentID: "agent-1", want: true},
+		"agentID set wins over a matching MAC":        {hw: withMAC("agent-1", "aa:bb:cc:dd:ee:ff"), agentID: "aa:bb:cc:dd:ee:ff", want: false},
+		"agentID unset, MAC matches case-insensitive": {hw: withMAC("", "AA:BB:CC:DD:EE:FF"), agentID: "aa:bb:cc:dd:ee:ff", want: true},
+		"agentID unset, no MAC matches":               {hw: withMAC("", "aa:bb:cc:dd:ee:00"), agentID: "aa:bb:cc:dd:ee:ff", want: false},
+		"agentID unset, interface without DHCP":       {hw: &tinkerbell.Hardware{Spec: tinkerbell.HardwareSpec{Interfaces: []tinkerbell.Interface{{}}}}, agentID: "aa:bb:cc:dd:ee:ff", want: false},
+		"agentID unset and empty calling agentID":     {hw: withMAC("", ""), agentID: "", want: false},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := isHardwareOwnAgent(tc.hw, tc.agentID); got != tc.want {
+				t.Errorf("isHardwareOwnAgent() = %v, want %v", got, tc.want)
 			}
 		})
 	}
