@@ -34,6 +34,9 @@ type Info struct {
 	OSIE          OSIE
 	PXELINUX      PXELINUX
 	RPI           RPI
+	// Hardware is the backend object this Info was translated from. It is the object Events are
+	// recorded against, see Event.
+	Hardware *tinkerbell.Hardware
 }
 
 // OSIE or OS Installation Environment is the data about where the OSIE parts are located.
@@ -97,6 +100,7 @@ func GetByMac(ctx context.Context, mac net.HardwareAddr, br BackendReader) (Info
 		OSIE:          OSIE(n.OSIE),
 		PXELINUX:      PXELINUX(n.PXELINUX),
 		RPI:           RPI(n.RPI),
+		Hardware:      spec,
 	}, nil
 }
 
@@ -136,5 +140,6 @@ func GetByIP(ctx context.Context, ip net.IP, br BackendReader) (Info, error) {
 		OSIE:          OSIE(n.OSIE),
 		PXELINUX:      PXELINUX(n.PXELINUX),
 		RPI:           RPI(n.RPI),
+		Hardware:      spec,
 	}, nil
 }

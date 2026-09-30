@@ -123,7 +123,7 @@ func newManager(cfg *rest.Config, rr referenceResolver, opts controllerruntime.O
 		return nil, fmt.Errorf("controller manager: %w", err)
 	}
 
-	if err = workflow.NewReconciler(mgr.GetClient(), rr).SetupWithManager(mgr, ctrlcontroller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}); err != nil {
+	if err = workflow.NewReconciler(mgr.GetClient(), rr, workflow.WithEventRecorder(mgr.GetEventRecorder("tink-controller"))).SetupWithManager(mgr, ctrlcontroller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}); err != nil {
 		return nil, fmt.Errorf("setup workflow reconciler: %w", err)
 	}
 

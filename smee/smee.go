@@ -42,6 +42,7 @@ import (
 	"github.com/tinkerbell/tinkerbell/smee/internal/metric"
 	"github.com/tinkerbell/tinkerbell/smee/internal/syslog"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/client-go/tools/events"
 )
 
 // MetricsRegistry returns the Prometheus registry that contains all Smee metrics.
@@ -144,6 +145,8 @@ func (d *DHCPv6Mode) Type() string {
 type Config struct {
 	// Backend is the backend to use for getting data.
 	Backend BackendReader
+	// EventRecorder records netboot Events against Hardware. Optional; nil records nothing.
+	EventRecorder events.EventRecorder
 	// DHCP is the configuration for the DHCP service.
 	DHCP DHCP
 	// DHCPv6 is the configuration for the DHCPv6 service.
@@ -494,7 +497,7 @@ func (c *Config) PXEHTTPHandler(log logr.Logger) http.Handler {
 	router := binary.Router{
 		Log: log,
 		Routes: []binary.Route{ // order matters here, first match wins
-			binary.PXELinuxMACRoute{Log: log, Resolver: resolver},
+			binary.PXELinuxMACRoute{Log: log, Resolver: resolver, Recorder: c.EventRecorder},
 			binary.DiskAssetRoute{Log: log, Dir: c.TFTP.AssetDir},
 		},
 	}
@@ -526,6 +529,7 @@ func (c *Config) ScriptHandler(log logr.Logger) http.Handler {
 		StaticIPXEV6Enabled:   c.DHCPv6.Enabled && c.DHCPv6.Mode == DHCPv6ModeAutoStateless,
 		KernelName:            c.IPXE.HTTPScriptServer.KernelName,
 		InitrdName:            c.IPXE.HTTPScriptServer.InitrdName,
+		Recorder:              c.EventRecorder,
 	}
 	return jh.HandlerFunc()
 }
@@ -727,8 +731,8 @@ func (c *Config) services(log logr.Logger) ([]service, error) {
 					Log: log,
 					Routes: []binary.Route{ // order matters here, first match wins
 						binary.EmbeddedIPXERoute{Log: log, Patch: []byte(c.IPXE.EmbeddedScriptPatch)},
-						binary.PXELinuxMACRoute{Log: log, Resolver: resolver},
-						binary.RPiNetbootRoute{Log: log, Resolver: resolver, AssetDir: c.TFTP.AssetDir},
+						binary.PXELinuxMACRoute{Log: log, Resolver: resolver, Recorder: c.EventRecorder},
+						binary.RPiNetbootRoute{Log: log, Resolver: resolver, AssetDir: c.TFTP.AssetDir, Recorder: c.EventRecorder},
 						binary.DiskAssetRoute{Log: log, Dir: c.TFTP.AssetDir},
 					},
 				},

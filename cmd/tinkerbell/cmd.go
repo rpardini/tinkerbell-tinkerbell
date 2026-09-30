@@ -437,8 +437,10 @@ func executeWithOutput(ctx context.Context, cancel context.CancelFunc, args []st
 			return startupErr(fmt.Errorf("failed to create kube backend: %w", err))
 		}
 		s.Config.Backend = b
+		s.Config.EventRecorder = b.EventRecorder("smee")
 		h.Config.SetBackendFromFilterer(b)
 		ts.Config.SetBackends(b)
+		ts.Config.EventRecorder = b.EventRecorder("tink-server")
 		tc.Config.Client = b.ClientConfig
 		tc.Config.ReferenceResolver = b
 		rc.Config.Client = b.ClientConfig

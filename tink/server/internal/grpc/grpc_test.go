@@ -23,6 +23,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/events"
 )
 
 func TestGetAction(t *testing.T) {
@@ -1531,4 +1532,86 @@ func TestGetActionTerminalDoesNotShadowActive(t *testing.T) {
 			t.Fatalf("expected a permanent error to stop retrying after one list, got %d lists", backend.workflowLists)
 		}
 	})
+}
+
+func TestReportActionStatusEvents(t *testing.T) {
+	tests := map[string]struct {
+		state     tinkerbell.WorkflowState
+		report    proto.ActionStatusRequest_StateType
+		wantEvent string
+	}{
+		"first action running starts the workflow": {
+			state:     tinkerbell.WorkflowStatePending,
+			report:    proto.ActionStatusRequest_RUNNING,
+			wantEvent: `Normal WorkflowStarted Agent agent1 started Action "action1" of Task "task1"`,
+		},
+		"already running records nothing": {
+			state:  tinkerbell.WorkflowStateRunning,
+			report: proto.ActionStatusRequest_RUNNING,
+		},
+		"action failure fails the workflow": {
+			state:     tinkerbell.WorkflowStateRunning,
+			report:    proto.ActionStatusRequest_FAILED,
+			wantEvent: `Warning WorkflowFailed Action "action1" of Task "task1" failed on Agent agent1: disk not found`,
+		},
+		"action timeout times out the workflow": {
+			state:     tinkerbell.WorkflowStateRunning,
+			report:    proto.ActionStatusRequest_TIMEOUT,
+			wantEvent: `Warning WorkflowTimedOut Action "action1" of Task "task1" timed out on Agent agent1: disk not found`,
+		},
+		"last action success is left to the controller": {
+			state:  tinkerbell.WorkflowStateRunning,
+			report: proto.ActionStatusRequest_SUCCESS,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			wf := &tinkerbell.Workflow{
+				ObjectMeta: metav1.ObjectMeta{Name: "workflow1", Namespace: "default"},
+				Status: tinkerbell.WorkflowStatus{
+					State: tc.state,
+					Tasks: []tinkerbell.Task{{
+						ID:      "task1",
+						Name:    "task1",
+						AgentID: "agent1",
+						Actions: []tinkerbell.Action{{ID: "action1", Name: "action1", State: tinkerbell.WorkflowStatePending}},
+					}},
+				},
+			}
+			recorder := events.NewFakeRecorder(10)
+			handler := &Handler{
+				Backend:       &mockBackendReadWriter{workflow: wf},
+				RetryOptions:  []backoff.RetryOption{backoff.WithMaxTries(1)},
+				EventRecorder: recorder,
+			}
+
+			_, err := handler.ReportActionStatus(context.Background(), &proto.ActionStatusRequest{
+				WorkflowId:     toPtr("default/workflow1"),
+				TaskId:         toPtr("task1"),
+				AgentId:        toPtr("agent1"),
+				ActionId:       toPtr("action1"),
+				ActionName:     toPtr("action1"),
+				ActionState:    toPtr(tc.report),
+				ExecutionStart: timestamppb.New(time.Now()),
+				Message:        &proto.ActionMessage{Message: toPtr("disk not found")},
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			close(recorder.Events)
+
+			var got []string
+			for e := range recorder.Events {
+				got = append(got, e)
+			}
+			var want []string
+			if tc.wantEvent != "" {
+				want = []string{tc.wantEvent}
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Fatalf("unexpected events (-want +got):\n%s", diff)
+			}
+		})
+	}
 }

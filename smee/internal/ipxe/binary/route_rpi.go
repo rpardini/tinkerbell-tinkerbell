@@ -11,6 +11,7 @@ import (
 	"github.com/tinkerbell/tinkerbell/smee/internal/hardware"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"k8s.io/client-go/tools/events"
 )
 
 // RPiNetbootRoute handles RaspberryPi EEPROM netboot, which addresses by
@@ -37,6 +38,8 @@ type RPiNetbootRoute struct {
 	Log      logr.Logger
 	Resolver hardware.Resolver
 	AssetDir string
+	// Recorder records netboot Events against the matched Hardware. Optional.
+	Recorder events.EventRecorder
 }
 
 func (r RPiNetbootRoute) Name() string { return "rpi-netboot" }
@@ -73,6 +76,11 @@ func (r RPiNetbootRoute) TryServe(ctx context.Context, req Request, w io.ReaderF
 	// getting an indistinguishable "file not found".
 	if !hw.AllowNetboot {
 		log.Info("hardware does not allow netboot; skipping")
+		// Only record it for a request that is actually for this Pi's files: this route is
+		// consulted for every TFTP request from the client, not just RPi netboot ones.
+		if hw.RPI.SerialNum != "" && strings.HasPrefix(req.Filename, hw.RPI.SerialNum+"/") {
+			hardware.Warning(r.Recorder, hw, hardware.ReasonNetbootNotAllowed, "RPi netboot file %s refused, netboot.allowPXE is false", req.Filename)
+		}
 		return false, netbootNotAllowedForIP(req.Client.IP)
 	}
 
@@ -122,7 +130,16 @@ func (r RPiNetbootRoute) TryServe(ctx context.Context, req Request, w io.ReaderF
 	switch path.Clean(suffix) {
 	case "/config.txt":
 		log.Info("serving RPI ConfigTxt")
-		return serveTemplate(w, log, span, req.Filename, rpi.ConfigTxt)
+		handled, err := serveTemplate(w, log, span, req.Filename, rpi.ConfigTxt)
+		// config.txt is the first file the Pi asks for, so it stands for the netboot as a whole;
+		// recording every firmware file it pulls would only be noise.
+		switch {
+		case err != nil:
+			hardware.Warning(r.Recorder, hw, hardware.ReasonNetbootFailed, "sending RPi %s failed: %v", req.Filename, err)
+		case handled:
+			hardware.Normal(r.Recorder, hw, hardware.ReasonNetbootServed, "RPi %s served", req.Filename)
+		}
+		return handled, err
 	case "/cmdline.txt":
 		cmdline := strings.Join(hw.OSIE.KernelParams, " ")
 		log.Info("serving cmdline.txt from OSIE.KernelParams", "params", hw.OSIE.KernelParams)

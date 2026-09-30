@@ -3,6 +3,7 @@ package controller_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -171,7 +173,7 @@ func TestTaskReconcile(t *testing.T) {
 				WithObjects(task, secret).
 				Build()
 
-			reconciler := controller.NewTaskReconciler(cluster, newTestClient(tt.provider))
+			reconciler := controller.NewTaskReconciler(cluster, &events.FakeRecorder{}, newTestClient(tt.provider))
 			request := reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: task.Namespace,
@@ -331,4 +333,59 @@ func createTaskWithRPC(name string, action bmc.Action, secret *corev1.Secret) *b
 	}
 
 	return task
+}
+
+func TestTaskReconcileEvents(t *testing.T) {
+	tests := map[string]struct {
+		action   bmc.Action
+		provider *testProvider
+		want     []string
+	}{
+		"power on": {
+			action:   getAction("PowerOn"),
+			provider: &testProvider{Powerstate: "on", PowerSetOK: true},
+			want:     []string{"Normal PowerActionStarted", "Normal PowerActionCompleted"},
+		},
+		"power on fails": {
+			action:   getAction("PowerOn"),
+			provider: &testProvider{ErrPowerStateSet: errors.New("failed to set power state")},
+			want:     []string{"Warning PowerActionFailed"},
+		},
+		"bmc unreachable": {
+			action:   getAction("HardOff"),
+			provider: &testProvider{ErrOpen: errors.New("failed to open")},
+			want:     []string{"Warning PowerActionFailed"},
+		},
+		"virtual media": {
+			action:   getAction("VirtualMedia"),
+			provider: &testProvider{VirtualMediaOK: true},
+			want:     []string{"Normal VirtualMediaStarted", "Normal VirtualMediaCompleted"},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			secret := createSecret()
+			task := createTask("events", tt.action, secret)
+			cluster := newClientBuilder().WithObjects(task, secret).Build()
+			recorder := events.NewFakeRecorder(10)
+			reconciler := controller.NewTaskReconciler(cluster, recorder, newTestClient(tt.provider))
+			request := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: task.Namespace, Name: task.Name}}
+
+			// The second reconcile checks on the action started by the first; a failed Task is left alone.
+			_, _ = reconciler.Reconcile(context.Background(), request)
+			_, _ = reconciler.Reconcile(context.Background(), request)
+			close(recorder.Events)
+
+			var got []string
+			for e := range recorder.Events {
+				// Keep "<type> <reason>", the note is free text.
+				f := strings.Fields(e)
+				got = append(got, f[0]+" "+f[1])
+			}
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Fatalf("unexpected events (-want +got):\n%s", diff)
+			}
+		})
+	}
 }
