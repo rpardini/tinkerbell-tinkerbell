@@ -638,7 +638,7 @@ func (h *Handler) updateHardwareWithAttributes(ctx context.Context, log logr.Log
 
 // resolveAndApplyInBandAttributes resolves the Hardware object for a Workflow and applies the calling
 // Agent's attributes to status.attributes.inBand, but only when the calling Agent is the Hardware's own
-// Agent (hw.Spec.AgentID) - other Agents used by the Workflow (e.g. an administrative Agent handling
+// Agent (see isHardwareOwnAgent) - other Agents used by the Workflow (e.g. an administrative Agent handling
 // network or Netbox tasks) don't run on the target Hardware and would otherwise overwrite its in-band
 // attributes with unrelated data. Unlike the legacy annotation, this is applied every time a matching
 // Agent reports in, regardless of any existing value, so Hardware changes or a Tink Agent update are
@@ -648,7 +648,12 @@ func (h *Handler) resolveAndApplyInBandAttributes(ctx context.Context, log logr.
 		return
 	}
 	hwRef = h.resolveHardware(ctx, hwRef, hardwareRef, namespace)
-	if hwRef == nil || hwRef.Spec.AgentID != agentID {
+	if hwRef == nil {
+		return
+	}
+	if !isHardwareOwnAgent(hwRef, agentID) {
+		journal.Log(ctx, "skipping Hardware status.attributes.inBand: calling Agent is not the Hardware's own Agent", "hardware", hwRef.Name, "hardwareAgentID", hwRef.Spec.AgentID)
+		log.Info("skipping Hardware status.attributes.inBand: calling Agent is not the Hardware's own Agent", "hardware", hwRef.Name, "hardwareAgentID", hwRef.Spec.AgentID)
 		return
 	}
 	// inBandAttributesFromAgent(attrs) only returns nil when attrs is nil, already
@@ -662,6 +667,24 @@ func (h *Handler) resolveAndApplyInBandAttributes(ctx context.Context, log logr.
 		journal.Log(ctx, "error applying Hardware status.attributes.inBand", "error", err)
 		log.Error(err, "error applying Hardware status.attributes.inBand")
 	}
+}
+
+// isHardwareOwnAgent reports whether agentID is hw's own Agent: hw.Spec.AgentID if set, otherwise
+// any of hw's interface MACs - the same default Smee uses for the booted Agent's worker_id when
+// spec.agentID is unset, so Hardware that never set it still gets its in-band attributes.
+func isHardwareOwnAgent(hw *tinkerbell.Hardware, agentID string) bool {
+	if hw.Spec.AgentID != "" {
+		return hw.Spec.AgentID == agentID
+	}
+	if agentID == "" {
+		return false
+	}
+	for _, iface := range hw.Spec.Interfaces {
+		if iface.DHCP != nil && strings.EqualFold(iface.DHCP.MAC, agentID) {
+			return true
+		}
+	}
+	return false
 }
 
 // resolveHardware returns hwRef unchanged if already resolved, otherwise reads it from the backend.
