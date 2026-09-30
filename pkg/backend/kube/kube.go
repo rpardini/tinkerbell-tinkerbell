@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -149,6 +150,12 @@ func loadConfig(cfg Backend) (Backend, error) {
 // Start starts the client-side cache.
 func (b *Backend) Start(ctx context.Context) error {
 	return b.cluster.Start(ctx)
+}
+
+// EventRecorder returns a recorder that emits events.k8s.io Events on behalf of the named
+// component. Events are sent through the cluster's broadcaster, which is started on first use.
+func (b *Backend) EventRecorder(component string) events.EventRecorder {
+	return b.cluster.GetEventRecorder(component)
 }
 
 func NewFileRestConfig(kubeconfigPath, namespace string) (*rest.Config, error) {

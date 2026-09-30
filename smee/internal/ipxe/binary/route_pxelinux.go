@@ -10,6 +10,7 @@ import (
 	"github.com/tinkerbell/tinkerbell/smee/internal/hardware"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"k8s.io/client-go/tools/events"
 )
 
 // PXELinuxMACRoute handles PXELinux requests of the exact form
@@ -28,6 +29,8 @@ import (
 type PXELinuxMACRoute struct {
 	Log      logr.Logger
 	Resolver hardware.Resolver
+	// Recorder records netboot Events against the matched Hardware. Optional.
+	Recorder events.EventRecorder
 }
 
 const (
@@ -77,6 +80,7 @@ func (r PXELinuxMACRoute) TryServe(ctx context.Context, req Request, w io.Reader
 	// getting an indistinguishable "file not found".
 	if !hw.AllowNetboot {
 		log.V(1).Info("hardware does not allow netboot; skipping", "mac", mac.String())
+		hardware.Warning(r.Recorder, hw, hardware.ReasonNetbootNotAllowed, "%s refused, netboot.allowPXE is false", req.Filename)
 		return false, netbootNotAllowedForMAC(mac)
 	}
 
@@ -89,10 +93,12 @@ func (r PXELinuxMACRoute) TryServe(ctx context.Context, req Request, w io.Reader
 	if err != nil {
 		log.Error(err, "serving PXELINUX config failed", "bytesSent", bytesSent)
 		span.SetStatus(codes.Error, err.Error())
+		hardware.Warning(r.Recorder, hw, hardware.ReasonNetbootFailed, "sending %s failed: %v", req.Filename, err)
 		return true, err
 	}
 
 	log.Info("PXELINUX config served", "bytesSent", bytesSent)
+	hardware.Normal(r.Recorder, hw, hardware.ReasonNetbootServed, "%s served", req.Filename)
 	span.SetStatus(codes.Ok, req.Filename)
 	return true, nil
 }

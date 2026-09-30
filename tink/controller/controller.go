@@ -141,6 +141,7 @@ func newManager(cfg *rest.Config, dc dynamicClient, opts controllerruntime.Optio
 		return nil, fmt.Errorf("controller manager: %w", err)
 	}
 
+	wfOpts = append(wfOpts, workflow.WithEventRecorder(mgr.GetEventRecorder("tink-controller")))
 	if err = workflow.NewReconciler(mgr.GetClient(), dc, wfOpts...).SetupWithManager(mgr, ctrlcontroller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}); err != nil {
 		return nil, fmt.Errorf("setup workflow reconciler: %w", err)
 	}

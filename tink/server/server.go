@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
+	"k8s.io/client-go/tools/events"
 )
 
 // Registry is the Prometheus registry for all Tink server gRPC metrics.
@@ -42,6 +43,8 @@ type Config struct {
 	Logger logr.Logger
 	Auto   AutoCapabilities
 	TLS    TLS
+	// EventRecorder records Workflow Events as Agents report Action status. Optional; nil records nothing.
+	EventRecorder events.EventRecorder
 }
 
 type AutoCapabilities struct {
@@ -122,9 +125,10 @@ func NewConfig(opts ...Option) *Config {
 
 func (c *Config) Start(ctx context.Context, log logr.Logger) error {
 	s := &grpcinternal.Handler{
-		Backend: c.Backend,
-		Logger:  log,
-		NowFunc: time.Now,
+		Backend:       c.Backend,
+		Logger:        log,
+		NowFunc:       time.Now,
+		EventRecorder: c.EventRecorder,
 		AutoCapabilities: grpcinternal.AutoCapabilities{
 			Enrollment: grpcinternal.AutoEnrollment{
 				Enabled:               c.Auto.Enrollment.Enabled,
