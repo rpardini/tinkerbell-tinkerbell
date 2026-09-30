@@ -80,7 +80,7 @@ func (r PXELinuxMACRoute) TryServe(ctx context.Context, req Request, w io.Reader
 	// getting an indistinguishable "file not found".
 	if !hw.AllowNetboot {
 		log.V(1).Info("hardware does not allow netboot; skipping", "mac", mac.String())
-		hardware.Warning(r.Recorder, hw, hardware.ReasonNetbootNotAllowed, "%s refused, netboot.allowPXE is false", req.Filename)
+		hardware.Normal(r.Recorder, hw, hardware.ReasonNetbootNotAllowed, "%s not served, netboot.allowPXE is false", req.Filename)
 		return false, netbootNotAllowedForMAC(mac)
 	}
 

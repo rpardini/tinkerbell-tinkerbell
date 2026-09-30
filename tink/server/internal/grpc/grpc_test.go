@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"testing"
@@ -22,8 +23,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/events"
 )
 
 func TestGetAction(t *testing.T) {
@@ -1534,16 +1535,31 @@ func TestGetActionTerminalDoesNotShadowActive(t *testing.T) {
 	})
 }
 
+// capturingRecorder is an events.EventRecorder that keeps each Event as
+// "<regarding name> <related name> <type> <reason> <note>", "-" standing in for a nil object.
+type capturingRecorder struct{ events []string }
+
+func (c *capturingRecorder) Eventf(regarding, related runtime.Object, eventtype, reason, _, note string, args ...any) {
+	name := func(o runtime.Object) string {
+		if m, ok := o.(metav1.Object); ok && o != nil {
+			return m.GetName()
+		}
+		return "-"
+	}
+	c.events = append(c.events, fmt.Sprintf("%s %s %s %s %s", name(regarding), name(related), eventtype, reason, fmt.Sprintf(note, args...)))
+}
+
 func TestReportActionStatusEvents(t *testing.T) {
 	tests := map[string]struct {
 		state     tinkerbell.WorkflowState
 		report    proto.ActionStatusRequest_StateType
+		noHW      bool
 		wantEvent string
 	}{
 		"first action running starts the workflow": {
 			state:     tinkerbell.WorkflowStatePending,
 			report:    proto.ActionStatusRequest_RUNNING,
-			wantEvent: `Normal WorkflowStarted Agent agent1 started Action "action1" of Task "task1"`,
+			wantEvent: `hw1 workflow1 Normal WorkflowStarted Workflow workflow1: Agent agent1 started Action "action1" of Task "task1"`,
 		},
 		"already running records nothing": {
 			state:  tinkerbell.WorkflowStateRunning,
@@ -1552,16 +1568,22 @@ func TestReportActionStatusEvents(t *testing.T) {
 		"action failure fails the workflow": {
 			state:     tinkerbell.WorkflowStateRunning,
 			report:    proto.ActionStatusRequest_FAILED,
-			wantEvent: `Warning WorkflowFailed Action "action1" of Task "task1" failed on Agent agent1: disk not found`,
+			wantEvent: `hw1 workflow1 Warning WorkflowFailed Workflow workflow1: Action "action1" of Task "task1" failed on Agent agent1: disk not found`,
 		},
 		"action timeout times out the workflow": {
 			state:     tinkerbell.WorkflowStateRunning,
 			report:    proto.ActionStatusRequest_TIMEOUT,
-			wantEvent: `Warning WorkflowTimedOut Action "action1" of Task "task1" timed out on Agent agent1: disk not found`,
+			wantEvent: `hw1 workflow1 Warning WorkflowTimedOut Workflow workflow1: Action "action1" of Task "task1" timed out on Agent agent1: disk not found`,
 		},
 		"last action success is left to the controller": {
 			state:  tinkerbell.WorkflowStateRunning,
 			report: proto.ActionStatusRequest_SUCCESS,
+		},
+		"without Hardware it is recorded on the Workflow": {
+			state:     tinkerbell.WorkflowStatePending,
+			report:    proto.ActionStatusRequest_RUNNING,
+			noHW:      true,
+			wantEvent: `workflow1 - Normal WorkflowStarted Agent agent1 started Action "action1" of Task "task1"`,
 		},
 	}
 
@@ -1569,6 +1591,7 @@ func TestReportActionStatusEvents(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			wf := &tinkerbell.Workflow{
 				ObjectMeta: metav1.ObjectMeta{Name: "workflow1", Namespace: "default"},
+				Spec:       tinkerbell.WorkflowSpec{HardwareRef: "hw1"},
 				Status: tinkerbell.WorkflowStatus{
 					State: tc.state,
 					Tasks: []tinkerbell.Task{{
@@ -1579,9 +1602,13 @@ func TestReportActionStatusEvents(t *testing.T) {
 					}},
 				},
 			}
-			recorder := events.NewFakeRecorder(10)
+			backend := &mockBackendReadWriter{workflow: wf, hardware: &tinkerbell.Hardware{ObjectMeta: metav1.ObjectMeta{Name: "hw1", Namespace: "default"}}}
+			if tc.noHW {
+				backend.hardware = nil
+			}
+			recorder := &capturingRecorder{}
 			handler := &Handler{
-				Backend:       &mockBackendReadWriter{workflow: wf},
+				Backend:       backend,
 				RetryOptions:  []backoff.RetryOption{backoff.WithMaxTries(1)},
 				EventRecorder: recorder,
 			}
@@ -1599,17 +1626,12 @@ func TestReportActionStatusEvents(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			close(recorder.Events)
 
-			var got []string
-			for e := range recorder.Events {
-				got = append(got, e)
-			}
 			var want []string
 			if tc.wantEvent != "" {
 				want = []string{tc.wantEvent}
 			}
-			if diff := cmp.Diff(want, got); diff != "" {
+			if diff := cmp.Diff(want, recorder.events); diff != "" {
 				t.Fatalf("unexpected events (-want +got):\n%s", diff)
 			}
 		})

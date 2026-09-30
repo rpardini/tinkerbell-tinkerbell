@@ -181,7 +181,7 @@ func (h *Handler) HandlerFunc() http.HandlerFunc {
 // than a parse error.
 func (h *Handler) serveNetbootNotAllowed(w http.ResponseWriter, hw hardware.Info, client string) {
 	h.Logger.Info("netboot not allowed for this hardware, netboot.allowPXE is false", "client", client)
-	hardware.Warning(h.Recorder, hw, hardware.ReasonNetbootNotAllowed, "iPXE script refused, netboot.allowPXE is false (%s)", client)
+	hardware.Normal(h.Recorder, hw, hardware.ReasonNetbootNotAllowed, "iPXE script not served, netboot.allowPXE is false (%s)", client)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusForbidden)

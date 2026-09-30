@@ -3,11 +3,14 @@ package controller
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/tinkerbell/tinkerbell/api/v1alpha1/bmc"
+	"github.com/tinkerbell/tinkerbell/api/v1alpha1/tinkerbell"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Suffixes of the Event reasons recorded for a Task, prefixed with the kind of BMC action it runs,
@@ -38,9 +41,10 @@ func describeAction(a bmc.Action) (kind, description string) {
 	}
 }
 
-// eventTarget returns the object a Task's Events are recorded against: the Machine targeted by the
-// Task's owning Job, so they show up alongside the Machine, with the Task as the related object.
-// It falls back to the Task itself when the Machine can't be resolved.
+// eventTarget returns the object a Task's Events are recorded against, and the related object.
+// That is the Hardware linked (via spec.bmcRef) to the Machine targeted by the Task's owning Job,
+// so a machine's history is in one place, with the Task as the related object. It falls back to
+// the Machine when no single Hardware links to it, and to the Task when the Machine can't be found.
 func (r *TaskReconciler) eventTarget(ctx context.Context, task *bmc.Task) (regarding, related runtime.Object) {
 	for _, ref := range task.OwnerReferences {
 		if ref.Kind != "Job" {
@@ -54,9 +58,35 @@ func (r *TaskReconciler) eventTarget(ctx context.Context, task *bmc.Task) (regar
 		if err := r.client.Get(ctx, types.NamespacedName{Namespace: job.Spec.MachineRef.Namespace, Name: job.Spec.MachineRef.Name}, machine); err != nil {
 			break
 		}
+		if hw := r.linkedHardware(ctx, machine); hw != nil {
+			return hw, task
+		}
 		return machine, task
 	}
 	return task, nil
+}
+
+// linkedHardware returns the single Hardware whose spec.bmcRef points at the Machine, or nil.
+func (r *TaskReconciler) linkedHardware(ctx context.Context, machine *bmc.Machine) *tinkerbell.Hardware {
+	var list tinkerbell.HardwareList
+	if err := r.client.List(ctx, &list, client.InNamespace(machine.Namespace), client.MatchingFields{hardwareBMCRefIndexKey: machine.Name}); err != nil {
+		// The field index is only registered when inventory collection is enabled; filter by hand without it.
+		list = tinkerbell.HardwareList{}
+		if err := r.client.List(ctx, &list, client.InNamespace(machine.Namespace)); err != nil {
+			return nil
+		}
+	}
+	var found *tinkerbell.Hardware
+	for i := range list.Items {
+		if !slices.Contains(hardwareBMCRefIndexFunc(&list.Items[i]), machine.Name) {
+			continue
+		}
+		if found != nil {
+			return nil // ambiguous, see findLinkedHardware
+		}
+		found = &list.Items[i]
+	}
+	return found
 }
 
 // recordEvent records an Event about the Task's BMC action. The reason is the action kind followed by suffix.
