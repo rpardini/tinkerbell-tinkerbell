@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"k8s.io/client-go/tools/events"
 )
 
 type Handler struct {
@@ -40,6 +41,8 @@ type Handler struct {
 	// BootstrapPath is the route per-host configuration archives are served
 	// under on this server, e.g. "/bootstrap/". Empty disables delivery.
 	BootstrapPath string
+	// Recorder records netboot Events against the Hardware being served. Optional.
+	Recorder events.EventRecorder
 }
 
 type addressFamily string
@@ -130,7 +133,7 @@ func (h *Handler) HandlerFunc() http.HandlerFunc {
 				return
 			}
 			if !hw.AllowNetboot {
-				h.serveNetbootNotAllowed(w, fmt.Sprintf("mac: %v", ha))
+				h.serveNetbootNotAllowed(w, hw, fmt.Sprintf("mac: %v", ha))
 
 				return
 			}
@@ -151,7 +154,7 @@ func (h *Handler) HandlerFunc() http.HandlerFunc {
 				return
 			}
 			if !hw.AllowNetboot {
-				h.serveNetbootNotAllowed(w, fmt.Sprintf("ip: %v", ip))
+				h.serveNetbootNotAllowed(w, hw, fmt.Sprintf("ip: %v", ip))
 
 				return
 			}
@@ -180,8 +183,9 @@ func (h *Handler) HandlerFunc() http.HandlerFunc {
 // The body is written as an iPXE comment so a client that fetched this as a
 // script and ignored the status still shows something intelligible rather
 // than a parse error.
-func (h *Handler) serveNetbootNotAllowed(w http.ResponseWriter, client string) {
+func (h *Handler) serveNetbootNotAllowed(w http.ResponseWriter, hw hardware.Info, client string) {
 	h.Logger.Info("netboot not allowed for this hardware, netboot.allowPXE is false", "client", client)
+	hardware.Normal(h.Recorder, hw, hardware.ReasonNetbootNotAllowed, "iPXE script not served, netboot.allowPXE is false (%s)", client)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusForbidden)
@@ -266,6 +270,7 @@ func (h *Handler) serveBootScript(ctx context.Context, w http.ResponseWriter, na
 			w.WriteHeader(http.StatusInternalServerError)
 			h.Logger.Error(err, "error with default ipxe script", "script", name)
 			span.SetStatus(codes.Error, err.Error())
+			hardware.Warning(h.Recorder, hw, hardware.ReasonNetbootFailed, "generating iPXE script %s failed: %v", name, err)
 
 			return
 		}
@@ -276,6 +281,7 @@ func (h *Handler) serveBootScript(ctx context.Context, w http.ResponseWriter, na
 			w.WriteHeader(http.StatusInternalServerError)
 			h.Logger.Error(err, "error with custom ipxe script", "script", name)
 			span.SetStatus(codes.Error, err.Error())
+			hardware.Warning(h.Recorder, hw, hardware.ReasonNetbootFailed, "generating iPXE script %s failed: %v", name, err)
 
 			return
 		}
@@ -293,9 +299,11 @@ func (h *Handler) serveBootScript(ctx context.Context, w http.ResponseWriter, na
 	if _, err := w.Write(script); err != nil { //nolint:gosec // G705: script content is server-generated iPXE boot scripts, not user-supplied
 		h.Logger.Error(err, "unable to write boot script", "script", name)
 		span.SetStatus(codes.Error, err.Error())
+		hardware.Warning(h.Recorder, hw, hardware.ReasonNetbootFailed, "sending iPXE script %s failed: %v", name, err)
 
 		return
 	}
+	hardware.Normal(h.Recorder, hw, hardware.ReasonNetbootServed, "iPXE script %s served", name)
 }
 
 func (h *Handler) defaultScript(span trace.Span, hw hardware.Info, settings familySettings) (string, error) {
