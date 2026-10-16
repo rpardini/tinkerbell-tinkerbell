@@ -10,10 +10,12 @@ import (
 	"github.com/go-logr/logr"
 	v1alpha1 "github.com/tinkerbell/tinkerbell/api/v1alpha1/tinkerbell"
 	"github.com/tinkerbell/tinkerbell/pkg/journal"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -37,6 +39,14 @@ const (
 
 	// reasonError is the condition Reason set when a workflow step fails.
 	reasonError = "Error"
+
+	// Workflow Event reasons and actions, recorded when the controller moves a Workflow into a final state.
+	eventReasonWorkflowSucceeded = "WorkflowSucceeded"
+	eventReasonWorkflowFailed    = "WorkflowFailed"
+	eventReasonWorkflowTimedOut  = "WorkflowTimedOut"
+	eventActionPrepare           = "PrepareBootOptions"
+	eventActionRun               = "RunWorkflow"
+	eventActionPost              = "PostActions"
 )
 
 type referenceResolver interface {
@@ -50,19 +60,33 @@ type Reconciler struct {
 	nowFunc    func() time.Time
 	backoff    *backoff.ExponentialBackOff
 	references referenceResolver
+	recorder   events.EventRecorder
+}
+
+type Option func(*Reconciler)
+
+// WithEventRecorder sets the recorder used to emit Workflow Events.
+func WithEventRecorder(rec events.EventRecorder) Option {
+	return func(r *Reconciler) {
+		r.recorder = rec
+	}
 }
 
 // TODO(jacobweinstock): add functional arguments to the signature.
 // TODO(jacobweinstock): write functional argument for customizing the backoff.
-func NewReconciler(client ctrlclient.Client, references referenceResolver) *Reconciler {
+func NewReconciler(client ctrlclient.Client, references referenceResolver, opts ...Option) *Reconciler {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = 5 * time.Second // this should keep all NextBackOff's under 10 seconds
-	return &Reconciler{
+	r := &Reconciler{
 		client:     client,
 		nowFunc:    time.Now,
 		backoff:    bo,
 		references: references,
 	}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 func (r *Reconciler) SetupWithManager(mgr manager.Manager, opts controller.Options) error {
@@ -133,8 +157,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			backoff:  r.backoff,
 		}
 		resp, err := s.prepareWorkflow(ctx)
+		perr := mergePatchStatus(ctx, r.client, stored, s.workflow)
+		if perr == nil {
+			r.recordFinalState(ctx, stored, s.workflow, eventActionPrepare, err)
+		}
 
-		return resp, errors.Join(err, mergePatchStatus(ctx, r.client, stored, s.workflow))
+		return resp, errors.Join(err, perr)
 	case v1alpha1.WorkflowStateRunning:
 		journal.Log(ctx, "process running workflow")
 
@@ -142,7 +170,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if wflow.Status.GlobalExecutionStop != nil && r.nowFunc().After(wflow.Status.GlobalExecutionStop.Time) {
 			journal.Log(ctx, "global timeout reached")
 			wflow.Status.State = v1alpha1.WorkflowStateTimeout
-			return reconcile.Result{}, mergePatchStatus(ctx, r.client, stored, wflow)
+			if err := mergePatchStatus(ctx, r.client, stored, wflow); err != nil {
+				return reconcile.Result{}, err
+			}
+			r.recordFinalState(ctx, stored, wflow, eventActionRun, fmt.Errorf("global timeout of %ds reached", wflow.Status.GlobalTimeout))
+			return reconcile.Result{}, nil
 		}
 
 		// Update AgentID if transitioning between tasks
@@ -176,8 +208,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			backoff:  r.backoff,
 		}
 		rc, err := s.postActions(ctx)
+		perr := mergePatchStatus(ctx, r.client, stored, wflow)
+		if perr == nil {
+			r.recordFinalState(ctx, stored, wflow, eventActionPost, err)
+		}
 
-		return rc, errors.Join(err, mergePatchStatus(ctx, r.client, stored, wflow))
+		return rc, errors.Join(err, perr)
 	case v1alpha1.WorkflowStatePending, v1alpha1.WorkflowStateTimeout, v1alpha1.WorkflowStateFailed, v1alpha1.WorkflowStateSuccess:
 		journal.Log(ctx, "controller will not trigger another reconcile", "state", wflow.Status.State)
 
@@ -191,6 +227,39 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	return reconcile.Result{}, nil
+}
+
+// recordFinalState records an Event when a reconcile has moved the Workflow into a final state.
+// Transitions driven by Agents (running, and failures of Actions) are recorded by the Tink Server.
+func (r *Reconciler) recordFinalState(ctx context.Context, original, updated *v1alpha1.Workflow, action string, cause error) {
+	if r.recorder == nil || original.Status.State == updated.Status.State {
+		return
+	}
+	why := ""
+	if cause != nil {
+		why = ": " + cause.Error()
+	}
+	var eventtype, reason, note string
+	switch updated.Status.State {
+	case v1alpha1.WorkflowStateSuccess:
+		eventtype, reason, note = corev1.EventTypeNormal, eventReasonWorkflowSucceeded, "Workflow completed successfully"
+	case v1alpha1.WorkflowStateFailed:
+		eventtype, reason, note = corev1.EventTypeWarning, eventReasonWorkflowFailed, "Workflow failed"+why
+	case v1alpha1.WorkflowStateTimeout:
+		eventtype, reason, note = corev1.EventTypeWarning, eventReasonWorkflowTimedOut, "Workflow timed out"+why
+	default:
+		return
+	}
+	// Recorded against the Hardware the Workflow runs on, so a machine's history is in one place,
+	// with the Workflow as the related object. Falls back to the Workflow if there's no Hardware.
+	if updated.Spec.HardwareRef != "" {
+		hw := &v1alpha1.Hardware{}
+		if err := r.client.Get(ctx, ctrlclient.ObjectKey{Name: updated.Spec.HardwareRef, Namespace: updated.Namespace}, hw); err == nil {
+			r.recorder.Eventf(hw, updated, eventtype, reason, action, "Workflow %s: %s", updated.Name, note)
+			return
+		}
+	}
+	r.recorder.Eventf(updated, nil, eventtype, reason, action, "%s", note)
 }
 
 // mergePatchStatus merges an updated Workflow with an original Workflow and patches the Status object via the client (cc).

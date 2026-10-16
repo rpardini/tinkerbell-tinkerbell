@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -23,6 +24,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -1598,6 +1600,108 @@ func TestReportActionStatusInvalidWorkflowID(t *testing.T) {
 			}
 			if backend.workflowReads != 0 {
 				t.Fatalf("expected no workflow read, got %d", backend.workflowReads)
+			}
+		})
+	}
+}
+
+// capturingRecorder is an events.EventRecorder that keeps each Event as
+// "<regarding name> <related name> <type> <reason> <note>", "-" standing in for a nil object.
+type capturingRecorder struct{ events []string }
+
+func (c *capturingRecorder) Eventf(regarding, related runtime.Object, eventtype, reason, _, note string, args ...any) {
+	name := func(o runtime.Object) string {
+		if m, ok := o.(metav1.Object); ok && o != nil {
+			return m.GetName()
+		}
+		return "-"
+	}
+	c.events = append(c.events, fmt.Sprintf("%s %s %s %s %s", name(regarding), name(related), eventtype, reason, fmt.Sprintf(note, args...)))
+}
+
+func TestReportActionStatusEvents(t *testing.T) {
+	tests := map[string]struct {
+		state     tinkerbell.WorkflowState
+		report    proto.ActionStatusRequest_StateType
+		noHW      bool
+		wantEvent string
+	}{
+		"first action running starts the workflow": {
+			state:     tinkerbell.WorkflowStatePending,
+			report:    proto.ActionStatusRequest_RUNNING,
+			wantEvent: `hw1 workflow1 Normal WorkflowStarted Workflow workflow1: Agent agent1 started Action "action1" of Task "task1"`,
+		},
+		"already running records nothing": {
+			state:  tinkerbell.WorkflowStateRunning,
+			report: proto.ActionStatusRequest_RUNNING,
+		},
+		"action failure fails the workflow": {
+			state:     tinkerbell.WorkflowStateRunning,
+			report:    proto.ActionStatusRequest_FAILED,
+			wantEvent: `hw1 workflow1 Warning WorkflowFailed Workflow workflow1: Action "action1" of Task "task1" failed on Agent agent1: disk not found`,
+		},
+		"action timeout times out the workflow": {
+			state:     tinkerbell.WorkflowStateRunning,
+			report:    proto.ActionStatusRequest_TIMEOUT,
+			wantEvent: `hw1 workflow1 Warning WorkflowTimedOut Workflow workflow1: Action "action1" of Task "task1" timed out on Agent agent1: disk not found`,
+		},
+		"last action success is left to the controller": {
+			state:  tinkerbell.WorkflowStateRunning,
+			report: proto.ActionStatusRequest_SUCCESS,
+		},
+		"without Hardware it is recorded on the Workflow": {
+			state:     tinkerbell.WorkflowStatePending,
+			report:    proto.ActionStatusRequest_RUNNING,
+			noHW:      true,
+			wantEvent: `workflow1 - Normal WorkflowStarted Agent agent1 started Action "action1" of Task "task1"`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			wf := &tinkerbell.Workflow{
+				ObjectMeta: metav1.ObjectMeta{Name: "workflow1", Namespace: "default"},
+				Spec:       tinkerbell.WorkflowSpec{HardwareRef: "hw1"},
+				Status: tinkerbell.WorkflowStatus{
+					State: tc.state,
+					Tasks: []tinkerbell.Task{{
+						ID:      "task1",
+						Name:    "task1",
+						AgentID: "agent1",
+						Actions: []tinkerbell.Action{{ID: "action1", Name: "action1", State: tinkerbell.WorkflowStatePending}},
+					}},
+				},
+			}
+			backend := &mockBackendReadWriter{workflow: wf, hardware: &tinkerbell.Hardware{ObjectMeta: metav1.ObjectMeta{Name: "hw1", Namespace: "default"}}}
+			if tc.noHW {
+				backend.hardware = nil
+			}
+			recorder := &capturingRecorder{}
+			handler := &Handler{
+				Backend:       backend,
+				EventRecorder: recorder,
+			}
+
+			_, err := handler.ReportActionStatus(context.Background(), &proto.ActionStatusRequest{
+				WorkflowId:     toPtr("default/workflow1"),
+				TaskId:         toPtr("task1"),
+				AgentId:        toPtr("agent1"),
+				ActionId:       toPtr("action1"),
+				ActionName:     toPtr("action1"),
+				ActionState:    toPtr(tc.report),
+				ExecutionStart: timestamppb.New(time.Now()),
+				Message:        &proto.ActionMessage{Message: toPtr("disk not found")},
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			var want []string
+			if tc.wantEvent != "" {
+				want = []string{tc.wantEvent}
+			}
+			if diff := cmp.Diff(want, recorder.events); diff != "" {
+				t.Fatalf("unexpected events (-want +got):\n%s", diff)
 			}
 		})
 	}

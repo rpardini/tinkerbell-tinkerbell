@@ -11,6 +11,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -259,7 +260,7 @@ func TestPatchStatusIgnoresNotFound(t *testing.T) {
 			})
 			reconcilers := map[client.Object]reconcile.Reconciler{
 				job:  controller.NewJobReconciler(c),
-				task: controller.NewTaskReconciler(c, newTestClient(&testProvider{Powerstate: "on", PowerSetOK: true})),
+				task: controller.NewTaskReconciler(c, &events.FakeRecorder{}, newTestClient(&testProvider{Powerstate: "on", PowerSetOK: true})),
 			}
 			for obj, r := range reconcilers {
 				_, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(obj)})
