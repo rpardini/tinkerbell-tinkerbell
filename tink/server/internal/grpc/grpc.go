@@ -18,8 +18,10 @@ import (
 	"github.com/tinkerbell/tinkerbell/pkg/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/events"
 )
 
 const (
@@ -29,6 +31,12 @@ const (
 
 	// maxAnnotationSize is the maximum allowed size for agent attributes annotations.
 	maxAnnotationSize = 64 * 1024 // 64KB
+
+	// Workflow Event reasons and action, recorded when an Agent's report moves a Workflow's state.
+	eventReasonWorkflowStarted  = "WorkflowStarted"
+	eventReasonWorkflowFailed   = "WorkflowFailed"
+	eventReasonWorkflowTimedOut = "WorkflowTimedOut"
+	eventActionRunAction        = "RunAction"
 )
 
 var (
@@ -95,6 +103,8 @@ type Handler struct {
 	Backend          Backend
 	NowFunc          func() time.Time
 	AutoCapabilities AutoCapabilities
+	// EventRecorder records Workflow Events on state changes. Optional.
+	EventRecorder events.EventRecorder
 
 	proto.UnimplementedWorkflowServiceServer
 }
@@ -441,6 +451,7 @@ func (h *Handler) ReportActionStatus(ctx context.Context, req *proto.ActionStatu
 					}
 				}
 
+				previousState := wf.Status.State
 				wf.Status.Tasks[ti].Actions[ai].State = tinkerbell.WorkflowState(req.GetActionState().String())
 				wf.Status.Tasks[ti].Actions[ai].ExecutionStart = &metav1.Time{Time: req.GetExecutionStart().AsTime()}
 				wf.Status.Tasks[ti].Actions[ai].ExecutionStop = &metav1.Time{Time: req.GetExecutionStop().AsTime()}
@@ -472,12 +483,59 @@ func (h *Handler) ReportActionStatus(ctx context.Context, req *proto.ActionStatu
 					}
 					return nil, status.Errorf(code, "error writing report status: %v", err)
 				}
+				h.recordStateChange(ctx, wf, previousState)
 				return &proto.ActionStatusResponse{}, nil
 			}
 		}
 	}
 
 	return nil, status.Error(codes.NotFound, "action not found")
+}
+
+// recordStateChange records an Event when an Agent's report has moved the Workflow into running,
+// failed or timed out. Success is recorded by the Workflow controller, which owns the transition
+// out of the post-actions state.
+func (h *Handler) recordStateChange(ctx context.Context, wf *tinkerbell.Workflow, previous tinkerbell.WorkflowState) {
+	if h.EventRecorder == nil || wf.Status.State == previous || wf.Status.CurrentState == nil {
+		return
+	}
+	var eventtype, reason, note string
+	cs := wf.Status.CurrentState
+	switch wf.Status.State {
+	case tinkerbell.WorkflowStateRunning:
+		eventtype, reason = corev1.EventTypeNormal, eventReasonWorkflowStarted
+		note = fmt.Sprintf("Agent %s started Action %q of Task %q", cs.AgentID, cs.ActionName, cs.TaskName)
+	case tinkerbell.WorkflowStateFailed:
+		eventtype, reason = corev1.EventTypeWarning, eventReasonWorkflowFailed
+		note = fmt.Sprintf("Action %q of Task %q failed on Agent %s: %s", cs.ActionName, cs.TaskName, cs.AgentID, actionMessage(wf, cs))
+	case tinkerbell.WorkflowStateTimeout:
+		eventtype, reason = corev1.EventTypeWarning, eventReasonWorkflowTimedOut
+		note = fmt.Sprintf("Action %q of Task %q timed out on Agent %s: %s", cs.ActionName, cs.TaskName, cs.AgentID, actionMessage(wf, cs))
+	default:
+		return
+	}
+	// Recorded against the Hardware the Workflow runs on, so a machine's history is in one place,
+	// with the Workflow as the related object. Falls back to the Workflow if there's no Hardware.
+	if hw := h.resolveHardware(ctx, nil, wf.Spec.HardwareRef, wf.Namespace); hw != nil {
+		h.EventRecorder.Eventf(hw, wf, eventtype, reason, eventActionRunAction, "Workflow %s: %s", wf.Name, note)
+		return
+	}
+	h.EventRecorder.Eventf(wf, nil, eventtype, reason, eventActionRunAction, "%s", note)
+}
+
+// actionMessage returns the message the Agent reported for the current Action.
+func actionMessage(wf *tinkerbell.Workflow, cs *tinkerbell.CurrentState) string {
+	for _, t := range wf.Status.Tasks {
+		if t.ID != cs.TaskID {
+			continue
+		}
+		for _, a := range t.Actions {
+			if a.ID == cs.ActionID {
+				return a.Message
+			}
+		}
+	}
+	return ""
 }
 
 // resolveAndAnnotateHardware resolves the Hardware object for a Workflow and persists agent attributes

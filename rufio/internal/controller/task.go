@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
@@ -41,13 +42,15 @@ const (
 // TaskReconciler reconciles a Task object.
 type TaskReconciler struct {
 	client           client.Client
+	recorder         events.EventRecorder
 	bmcClientFactory ClientFunc
 }
 
 // NewTaskReconciler returns a new TaskReconciler.
-func NewTaskReconciler(c client.Client, bmcClientFactory ClientFunc) *TaskReconciler {
+func NewTaskReconciler(c client.Client, recorder events.EventRecorder, bmcClientFactory ClientFunc) *TaskReconciler {
 	return &TaskReconciler{
 		client:           c,
+		recorder:         recorder,
 		bmcClientFactory: bmcClientFactory,
 	}
 }
@@ -132,6 +135,7 @@ func (r *TaskReconciler) doReconcile(ctx context.Context, task *bmc.Task, taskPa
 			if patchErr != nil {
 				return ctrl.Result{}, utilerrors.NewAggregate([]error{patchErr, timeOutErr})
 			}
+			r.recordFailed(ctx, task, timeOutErr)
 
 			return ctrl.Result{}, timeOutErr
 		}
@@ -150,6 +154,7 @@ func (r *TaskReconciler) doReconcile(ctx context.Context, task *bmc.Task, taskPa
 		if patchErr != nil {
 			return ctrl.Result{}, utilerrors.NewAggregate([]error{patchErr, err})
 		}
+		r.recordFailed(ctx, task, fmt.Errorf("connecting to BMC: %w", err))
 
 		return ctrl.Result{}, err
 	}
@@ -185,6 +190,7 @@ func (r *TaskReconciler) doReconcile(ctx context.Context, task *bmc.Task, taskPa
 		if err := r.patchStatus(ctx, task, taskPatch); err != nil {
 			return result, err
 		}
+		r.recordCompleted(ctx, task)
 
 		return result, nil
 	}
@@ -204,6 +210,7 @@ func (r *TaskReconciler) doReconcile(ctx context.Context, task *bmc.Task, taskPa
 		if patchErr != nil {
 			return ctrl.Result{}, utilerrors.NewAggregate([]error{patchErr, err})
 		}
+		r.recordFailed(ctx, task, err)
 
 		return ctrl.Result{}, err
 	}
@@ -211,6 +218,7 @@ func (r *TaskReconciler) doReconcile(ctx context.Context, task *bmc.Task, taskPa
 	if err := r.patchStatus(ctx, task, taskPatch); err != nil {
 		return ctrl.Result{}, err
 	}
+	r.recordStarted(ctx, task)
 
 	return ctrl.Result{}, nil
 }
