@@ -24,6 +24,8 @@ tinkerbell:
   optional:
     hookos:
       enabled: false # suite does its own nginx
+    captainos:
+      enabled: false # suite serves its own captain image volumes via hookImageServer
     migration:
       enabled: false # no migration here
     kubevip:
