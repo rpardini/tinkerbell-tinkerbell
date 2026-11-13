@@ -8,6 +8,11 @@ inputs:
   registry:
     description: The registry the artifacts were pushed to (e.g. ghcr.io).
     required: true
+  namespace:
+    description: >-
+      The path under the registry the artifacts were pushed to (e.g.
+      tinkerbell, or <owner>/tinkerbell in a fork).
+    required: true
   token:
     description: The password for the registry, as the repository owner.
     required: true
@@ -38,21 +43,24 @@ runs:
 
     - name: Sign the tinkerbell image
       shell: bash
-      run: ./script/sign-image.sh "${REGISTRY}/${GITHUB_REPOSITORY_OWNER}/tinkerbell" "${DIGEST}"
+      run: ./script/sign-image.sh "${REGISTRY}/${NAMESPACE}/tinkerbell" "${DIGEST}"
       env:
         REGISTRY: ${{ inputs.registry }}
+        NAMESPACE: ${{ inputs.namespace }}
         DIGEST: ${{ inputs.digest-tinkerbell }}
 
     - name: Sign the tink-agent image
       shell: bash
-      run: ./script/sign-image.sh "${REGISTRY}/${GITHUB_REPOSITORY_OWNER}/tink-agent" "${DIGEST}"
+      run: ./script/sign-image.sh "${REGISTRY}/${NAMESPACE}/tink-agent" "${DIGEST}"
       env:
         REGISTRY: ${{ inputs.registry }}
+        NAMESPACE: ${{ inputs.namespace }}
         DIGEST: ${{ inputs.digest-tink-agent }}
 
     - name: Sign the Helm chart
       shell: bash
-      run: ./script/sign-chart.sh "${REGISTRY}/${GITHUB_REPOSITORY_OWNER}/charts/tinkerbell" "${DIGEST}"
+      run: ./script/sign-chart.sh "${REGISTRY}/${NAMESPACE}/charts/tinkerbell" "${DIGEST}"
       env:
         REGISTRY: ${{ inputs.registry }}
+        NAMESPACE: ${{ inputs.namespace }}
         DIGEST: ${{ inputs.digest-chart }}

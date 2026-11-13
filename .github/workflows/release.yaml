@@ -140,6 +140,7 @@ jobs:
         uses: ./.github/actions/sign
         with:
           registry: ${{ env.REGISTRY }}
+          namespace: ${{ needs.publish.outputs.namespace }}
           token: ${{ secrets.GITHUB_TOKEN }}
           digest-tinkerbell: ${{ needs.publish.outputs.digest-tinkerbell }}
           digest-tink-agent: ${{ needs.publish.outputs.digest-tink-agent }}

@@ -27,6 +27,9 @@ on:
       digest-chart:
         description: The pushed digest of the Helm chart.
         value: ${{ jobs.chart.outputs.digest }}
+      namespace:
+        description: The path under the registry everything was pushed to.
+        value: ${{ jobs.images.outputs.namespace }}
 
 permissions:
   contents: read
@@ -35,6 +38,11 @@ permissions:
 env:
   REGISTRY: ghcr.io
   VERSION: ${{ inputs.version }}
+  # Fork: everything goes under <owner>/tinkerbell (plain tinkerbell upstream),
+  # so a fork's packages don't sit next to its other projects'.
+  NAMESPACE: ${{ ( github.repository_owner == 'tinkerbell' ) && 'tinkerbell' || format('{0}/tinkerbell', github.repository_owner) }}
+  # Fork: charts are versioned 0.0.<run>, monotonically increasing per run.
+  CHART_VERSION: 0.0.${{ github.run_number }}
 
 jobs:
   images:
@@ -43,6 +51,7 @@ jobs:
     outputs:
       digest-tinkerbell: ${{ steps.digest.outputs.digest-tinkerbell }}
       digest-tink-agent: ${{ steps.digest.outputs.digest-tink-agent }}
+      namespace: ${{ env.NAMESPACE }}
     strategy:
       matrix:
         include:
@@ -105,8 +114,8 @@ jobs:
       - name: Build and publish container images
         run: make ${{ matrix.make-target }}
         env:
-          IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.name }}
-          IMAGE_NAME_AGENT: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.name }}
+          IMAGE_NAME: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.name }}
+          IMAGE_NAME_AGENT: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.name }}
 
       - name: Record the pushed digest
         id: digest
@@ -145,15 +154,52 @@ jobs:
         with:
           version: v4.3.1
 
+      # Fork: also publishes tinkerbell-crds, showcase and suite, with the
+      # versions and image references set for this run.
+      - name: Set versions and image references in the Helm charts
+        run: |
+          # Preparation for the -crds Chart: copy the CRD files from crd/bases to helm/tinkerbell-crds/templates/
+          mkdir -p helm/tinkerbell-crds/templates
+          cp -v crd/bases/v1alpha1/* helm/tinkerbell-crds/templates/
+
+          wget "https://github.com/mikefarah/yq/releases/download/v4.45.1/yq_linux_amd64" -O "${RUNNER_TEMP}/yq"
+          chmod +x "${RUNNER_TEMP}/yq"
+          yq="${RUNNER_TEMP}/yq"
+
+          find helm -name Chart.yaml -exec "${yq}" eval -i ".version = \"${CHART_VERSION}\"" {} \;
+          find helm -name Chart.yaml -exec "${yq}" eval -i ".appVersion = \"${CHART_VERSION}\"" {} \;
+
+          images="${REGISTRY}/${NAMESPACE}"
+          "${yq}" eval -i ".deployment.agentImage = \"${images}/tink-agent\"" helm/tinkerbell/values.yaml
+          "${yq}" eval -i ".deployment.agentImageTag = \"${VERSION}\"" helm/tinkerbell/values.yaml
+          "${yq}" eval -i ".deployment.image = \"${images}/tinkerbell\"" helm/tinkerbell/values.yaml
+          "${yq}" eval -i ".deployment.imageTag = \"${VERSION}\"" helm/tinkerbell/values.yaml
+
+          # showcase: point at this run's agent image, and ship with every hook, image and device disabled.
+          "${yq}" eval -i ".tinkerbell.tinkWorkerImage = \"${images}/tink-agent:${VERSION}\"" helm/showcase/values.yaml
+          "${yq}" eval -i '.provision.hook[].enabled = false' helm/showcase/values.yaml
+          "${yq}" eval -i '.provision.images[].enabled = false' helm/showcase/values.yaml
+          "${yq}" eval -i '.hardware.devices[].enabled = false' helm/showcase/values.yaml
+
+          git diff || true
+
       # helm push prints the pushed reference and digest on stdout. pipefail
-      # (from shell: bash) keeps a failed push fatal.
-      - name: Package and publish the Helm chart
+      # (from shell: bash) keeps a failed push fatal. Only the tinkerbell
+      # chart is signed.
+      - name: Package and publish the Helm charts
         id: publish
         shell: bash
         run: |
-          mkdir -p out
-          make helm-publish | tee out/helm-push.txt
-          digest=$(./script/helm-push-digest.sh out/helm-push.txt "${HELM_REPO_NAME}/tinkerbell")
+          mkdir -p out/helm
+          declare -a charts=()
+          mapfile -t charts < <(find helm -mindepth 1 -maxdepth 1 -type d | sed 's|^helm/||')
+          for chart in "${charts[@]}"; do
+              echo "--> Doing chart '${chart}'"
+              helm dependency update "helm/${chart}" || true
+              helm package -d out/helm/ "helm/${chart}" --version "${CHART_VERSION}" --app-version "${CHART_VERSION}"
+              helm push "out/helm/${chart}-${CHART_VERSION}.tgz" "oci://${HELM_REPO_NAME}" | tee "out/helm-push-${chart}.txt"
+          done
+          digest=$(./script/helm-push-digest.sh out/helm-push-tinkerbell.txt "${HELM_REPO_NAME}/tinkerbell")
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
         env:
-          HELM_REPO_NAME: ${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+          HELM_REPO_NAME: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/charts
