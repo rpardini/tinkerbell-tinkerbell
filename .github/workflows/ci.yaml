@@ -2,6 +2,8 @@ name: For each commit and PR
 # Release tags run release.yaml instead.
 on:
   push:
+    paths-ignore:
+      - "smee/internal/ipxe/binary/file/script/**" # ignore iPXE build inputs
     branches:
       - "main"
   pull_request:
@@ -87,7 +89,23 @@ jobs:
         with:
           version: v4.3.1
 
-      - name: Lint and test Helm chart
+      - name: Lint and Template Helm charts
+        run: |
+          # Preparation for the -crds Chart: copy the CRD files from crd/bases to helm/tinkerbell-crds/templates/
+          mkdir -p helm/tinkerbell-crds/templates
+          cp -v crd/bases/v1alpha1/* helm/tinkerbell-crds/templates/
+
+          declare -a charts=()
+          # find and add every dir under helm/ directory; use mapfile to remove helm/ prefix
+          mapfile -t charts < <(find helm -mindepth 1 -maxdepth 1 -type d | sed 's|^helm/||')
+          for chart in "${charts[@]}"; do
+              echo "--> Validating chart '${chart}'"
+              helm dependency update "helm/${chart}" || true
+              helm lint "helm/${chart}" --set "trustedProxies={127.0.0.1/24}" --set "publicIP=1.1.1.1" --set "artifactsFileServer=http://2.2.2.2"
+              helm template test "helm/${chart}" --set "trustedProxies={127.0.0.1/24}" --set "publicIP=1.1.1.1" --set "artifactsFileServer=http://2.2.2.2" 2>&1 >/dev/null
+          done
+
+      - name: Lint (IPv6 variants) and test tinkerbell Helm chart
         run: make helm-lint helm-test
 
   # Decides, once per run, the version the publishing jobs publish and whether
@@ -186,14 +204,16 @@ jobs:
       contents: read
       packages: write
     if: needs.version.outputs.publish == 'true'
+    # Fork: publishing doesn't wait for validation.
     needs:
       - version
-      - validation
       - validate-helm-chart
       - build
     uses: ./.github/workflows/publish.yaml
     with:
-      version: ${{ needs.version.outputs.version }}
+      # Fork: images and chart values are tagged v0.0.0-<run>, not the
+      # script/publish-version.sh version; consumers (esp. tink-agent) rely on it.
+      version: v0.0.0-${{ github.run_number }}
       sha256sums-tinkerbell: ${{ needs.build.outputs.sha256sums-tinkerbell }}
       sha256sums-tink-agent: ${{ needs.build.outputs.sha256sums-tink-agent }}
 
@@ -222,6 +242,7 @@ jobs:
         uses: ./.github/actions/sign
         with:
           registry: ${{ env.REGISTRY }}
+          namespace: ${{ needs.publish.outputs.namespace }}
           token: ${{ secrets.GITHUB_TOKEN }}
           digest-tinkerbell: ${{ needs.publish.outputs.digest-tinkerbell }}
           digest-tink-agent: ${{ needs.publish.outputs.digest-tink-agent }}
