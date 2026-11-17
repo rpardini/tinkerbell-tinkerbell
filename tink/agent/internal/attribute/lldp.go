@@ -66,6 +66,8 @@ func (d lldp) neighbors(ctx context.Context, l logr.Logger, timeout time.Duratio
 		}
 		select {
 		case <-ctx.Done():
+			// Says which links held up startup for the whole timeout.
+			l.Info("LLDP: stopped waiting for neighbors", "error", ctx.Err(), "pending", pending(ifaces, found))
 			return found
 		case <-time.After(d.pollInterval):
 		}

@@ -262,6 +262,7 @@ func (o *Options) ConfigureAndRun(inctx context.Context, log logr.Logger, id str
 	// instantiate the implementation for the runtime executor
 	// instantiate the agent
 	// run the agent
+	start := time.Now()
 	var tr TransportReader
 	var tw TransportWriter
 	// Held back until the runtime executor is built: starting it here would leave
@@ -311,6 +312,7 @@ func (o *Options) ConfigureAndRun(inctx context.Context, log logr.Logger, id str
 	}
 
 	var re RuntimeExecutor
+	runtimeStart := time.Now()
 	switch o.RuntimeSelected {
 	case KubernetesRuntimeType:
 		kn, err := kubernetes.NewConfig(log, o.Runtime.Kubernetes.Namespace, o.Runtime.Kubernetes.Kubeconfig,
@@ -319,7 +321,7 @@ func (o *Options) ConfigureAndRun(inctx context.Context, log logr.Logger, id str
 			return fmt.Errorf("unable to create Kubernetes config: %w", err)
 		}
 		re = kn
-		log.Info("using Kubernetes runtime")
+		log.Info("using Kubernetes runtime", "duration", time.Since(runtimeStart).String())
 	case ContainerdRuntimeType:
 		opts := []containerd.Opt{}
 		if o.Runtime.Containerd.Namespace != "" {
@@ -339,7 +341,7 @@ func (o *Options) ConfigureAndRun(inctx context.Context, log logr.Logger, id str
 			return fmt.Errorf("unable to create Containerd config: %w", err)
 		}
 		re = cd
-		log.Info("using Containerd runtime")
+		log.Info("using Containerd runtime", "duration", time.Since(runtimeStart).String())
 	default:
 		opts := []client.Opt{
 			client.FromEnv,
@@ -361,7 +363,7 @@ func (o *Options) ConfigureAndRun(inctx context.Context, log logr.Logger, id str
 			},
 		}
 		re = dockerExecutor
-		log.Info("using Docker runtime")
+		log.Info("using Docker runtime", "duration", time.Since(runtimeStart).String())
 	}
 
 	a := &Config{
@@ -371,6 +373,7 @@ func (o *Options) ConfigureAndRun(inctx context.Context, log logr.Logger, id str
 		Retry:           o.Retry,
 	}
 
+	log.Info("agent initialized, starting action loop", "startupDuration", time.Since(start).String())
 	eg, ctx := errgroup.WithContext(inctx)
 	if startTransport != nil {
 		eg.Go(func() error {

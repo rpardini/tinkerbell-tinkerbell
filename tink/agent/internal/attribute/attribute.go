@@ -3,6 +3,7 @@ package attribute
 import (
 	"context"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -15,19 +16,32 @@ import (
 )
 
 // DiscoverAll discovers all attributes. lldpTimeout is passed to DiscoverNetworks.
+// Each step's duration is logged because discovery runs before the Agent takes its first Action,
+// so a slow step directly delays provisioning.
 func DiscoverAll(ctx context.Context, l logr.Logger, lldpTimeout time.Duration) *data.AgentAttributes {
-	return &data.AgentAttributes{
-		CPU:               DiscoverCPU(l),
-		Memory:            DiscoverMemory(l),
-		BlockDevices:      DiscoverBlockDevices(l),
-		NetworkInterfaces: DiscoverNetworks(ctx, l, lldpTimeout),
-		PCIDevices:        DiscoverPCI(l),
-		GPUDevices:        DiscoverGPU(l),
-		Chassis:           DiscoverChassis(l),
-		BIOS:              DiscoverBIOS(l),
-		Baseboard:         DiscoverBaseboard(l),
-		Product:           DiscoverProduct(l),
+	start := time.Now()
+	a := &data.AgentAttributes{
+		CPU:               timed(l, "cpu", func() *data.CPU { return DiscoverCPU(l) }),
+		Memory:            timed(l, "memory", func() *data.Memory { return DiscoverMemory(l) }),
+		BlockDevices:      timed(l, "block", func() []*data.Block { return DiscoverBlockDevices(l) }),
+		NetworkInterfaces: timed(l, "network", func() []*data.Network { return DiscoverNetworks(ctx, l, lldpTimeout) }),
+		PCIDevices:        timed(l, "pci", func() []*data.PCI { return DiscoverPCI(l) }),
+		GPUDevices:        timed(l, "gpu", func() []*data.GPU { return DiscoverGPU(l) }),
+		Chassis:           timed(l, "chassis", func() *data.Chassis { return DiscoverChassis(l) }),
+		BIOS:              timed(l, "bios", func() *data.BIOS { return DiscoverBIOS(l) }),
+		Baseboard:         timed(l, "baseboard", func() *data.Baseboard { return DiscoverBaseboard(l) }),
+		Product:           timed(l, "product", func() *data.Product { return DiscoverProduct(l) }),
 	}
+	l.Info("attribute discovery finished", "duration", time.Since(start).String())
+	return a
+}
+
+// timed runs f and logs how long it took.
+func timed[T any](l logr.Logger, name string, f func() T) T {
+	start := time.Now()
+	v := f()
+	l.Info("attribute discovery step finished", "attribute", name, "duration", time.Since(start).String())
+	return v
 }
 
 func DiscoverCPU(l logr.Logger) *data.CPU {
@@ -154,7 +168,15 @@ func DiscoverNetworks(ctx context.Context, l logr.Logger, lldpTimeout time.Durat
 		}
 	}
 
+	start := time.Now()
 	neighbors := newLLDP().neighbors(ctx, l, lldpTimeout, physical)
+	withNeighbors := make([]string, 0, len(neighbors))
+	for name := range neighbors {
+		withNeighbors = append(withNeighbors, name)
+	}
+	slices.Sort(withNeighbors)
+	l.Info("LLDP neighbor discovery finished", "duration", time.Since(start).String(), "timeout", lldpTimeout.String(),
+		"physicalInterfaces", physical, "interfacesWithNeighbors", withNeighbors)
 	for _, nic := range nics {
 		nic.LLDPNeighbors = neighbors[*nic.Name]
 	}
